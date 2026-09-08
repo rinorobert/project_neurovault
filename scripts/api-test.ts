@@ -530,12 +530,22 @@ async function run() {
     })
     check('Correct Constraint Breach submission is accepted', goodSubmit.body.correct === true)
     check('Correct submission marks the final module complete', goodSubmit.body.team.finalPuzzleCompleted === true)
+    check('Constraint Breach completion does NOT escape the team', goodSubmit.body.team.status === 'RUNNING')
     check(
       'Constraint Breach response never echoes back the override code or variant internals',
       !('finalCodeOverride' in goodSubmit.body.team)
     )
 
     const expectedOverride = deriveOverrideCodeFromPlacement(variant.solution)
+
+    const beforePartialFinal = await getDatabase().getTeamById(publicTeamId)
+    const partialFinal = await call('POST', `/api/teams/${publicTeamId}/final-code/verify`, { body: { code: '1234567' } })
+    const afterPartialFinal = await getDatabase().getTeamById(publicTeamId)
+    check('A 7-digit final override is rejected before validation', partialFinal.statusCode === 400)
+    check(
+      'A partial final override does not count as an attempt',
+      afterPartialFinal?.attempts === beforePartialFinal?.attempts && afterPartialFinal?.attemptLog.length === beforePartialFinal?.attemptLog.length
+    )
 
     const wrongFinal = await call('POST', `/api/teams/${publicTeamId}/final-code/verify`, { body: { code: '00000000' } })
     check('Wrong final override code is rejected', wrongFinal.body.correct === false)

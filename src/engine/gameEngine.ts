@@ -207,8 +207,10 @@ export function submitCode(
     return { patch: {}, correct: team.status === 'ESCAPED', attemptsRemaining: null }
   }
 
-  // Final code requires all 4 initial + final puzzle to be complete
-  if (!areInitialPuzzlesCompleted(team) || !team.finalPuzzleCompleted) {
+  // Final code requires all four initial modules, the independently
+  // validated recovery-code unlock, and the completed Constraint Breach.
+  // This server-side check deliberately duplicates the participant UI gate.
+  if (!areInitialPuzzlesCompleted(team) || !team.recoveryCodeUnlocked || !team.finalPuzzleCompleted) {
     return {
       patch: {},
       correct: false,

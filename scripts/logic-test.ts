@@ -163,6 +163,16 @@ section('4. Gated Final Code Submission (Escape)')
   const { correct: earlyCorrect } = engine.submitCode(incompleteTeam, correctCode, DEV_FIXTURE_PUZZLE_VERSIONS, now)
   check('Code submission rejected if final puzzle is not completed', !earlyCorrect)
 
+  const bypassRecoveryTeam: Team = { ...incompleteTeam, recoveryCodeUnlocked: false, finalPuzzleCompleted: true }
+  const { patch: bypassRecoveryPatch, correct: bypassRecoveryCorrect } = engine.submitCode(
+    bypassRecoveryTeam,
+    correctCode,
+    DEV_FIXTURE_PUZZLE_VERSIONS,
+    now
+  )
+  check('Final code is rejected if Constraint Breach is complete but Recovery Code was never unlocked', !bypassRecoveryCorrect)
+  check('Rejected pre-gate final code does not create an attempt', bypassRecoveryPatch.attempts === undefined)
+
   // Once final puzzle is complete, code submission succeeds
   const unlockedTeam: Team = { ...incompleteTeam, finalPuzzleCompleted: true }
   const { patch: subPatch, correct: subCorrect } = engine.submitCode(unlockedTeam, correctCode, DEV_FIXTURE_PUZZLE_VERSIONS, now)

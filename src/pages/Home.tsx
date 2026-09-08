@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useStore } from '../state/store.js'
 
 export default function Home() {
   const [introVisible, setIntroVisible] = useState(true)
+  // Settings are synchronized from /api/state; this is deliberately not a
+  // locally persisted preference. The server remains authoritative if a
+  // participant tries to navigate to the route directly.
+  const { settings } = useStore()
 
   return (
     <>
@@ -64,9 +69,20 @@ export default function Home() {
         <Link to="/register" className="font-mono text-xs tracking-widest hover:underline" style={{ color: 'var(--cyan)' }}>
           Register Your Team →
         </Link>
-        <Link to="/leaderboard" className="font-mono text-xs tracking-widest hover:underline" style={{ color: 'var(--text-dim)' }}>
-          View Public Leaderboard →
-        </Link>
+        {settings.publicLeaderboardUnlocked ? (
+          <Link to="/leaderboard" className="font-mono text-xs tracking-widest hover:underline" style={{ color: 'var(--text-dim)' }}>
+            View Public Leaderboard →
+          </Link>
+        ) : (
+          <span
+            className="font-mono text-xs tracking-widest cursor-not-allowed"
+            aria-disabled="true"
+            title="The coordinator has not released the public leaderboard yet."
+            style={{ color: 'var(--text-dim)', opacity: 0.55 }}
+          >
+            🔒 Public Leaderboard Locked
+          </span>
+        )}
       </div>
       </div>
     </>

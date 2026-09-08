@@ -28,7 +28,7 @@ function StandbyScreen() {
 }
 
 export default function ParticipantView() {
-  const { activeTeam, submitCode, verifyRecoveryCode } = useStore()
+  const { activeTeam, settings, submitCode, verifyRecoveryCode } = useStore()
   const [lastResult, setLastResult] = useState<{ correct: boolean; attemptsRemaining: number | null } | null>(null)
   const [shake, setShake] = useState(false)
   const [recoveryShake, setRecoveryShake] = useState(false)
@@ -47,6 +47,9 @@ export default function ParticipantView() {
   const initialDone = areInitialPuzzlesCompleted(team)
   const recoveryUnlocked = team.recoveryCodeUnlocked === true
   const canEnterRecoveryCode = initialDone && !recoveryUnlocked
+  // The override is a distinct post-Constraint-Breach step. Both flags are
+  // server-controlled; once Constraint Breach is completed, changing the
+  // coordinator's availability toggle must not hide the earned final input.
   const canEnterFinalCode = recoveryUnlocked && team.finalPuzzleCompleted
 
   async function handleSubmit(code: string) {
@@ -176,9 +179,18 @@ export default function ParticipantView() {
                 ) : canEnterFinalCode ? (
                   <>
                     <div className="font-mono text-xs tracking-[0.3em] text-center" style={{ color: 'var(--cyan)' }}>
-                      ENTER FINAL SECURITY OVERRIDE CODE
+                      FINAL OVERRIDE
                     </div>
-                    <CodeEntry length={8} onSubmit={handleSubmit} disabled={paused || attemptsExhausted} shake={shake} />
+                    <div className="font-mono text-[11px] text-center max-w-sm" style={{ color: 'var(--text-dim)' }}>
+                      Constraint Breach completed. Enter the 8-digit override sequence.
+                    </div>
+                    <CodeEntry
+                      length={8}
+                      onSubmit={handleSubmit}
+                      disabled={paused || attemptsExhausted}
+                      shake={shake}
+                      submitLabel="Submit Override"
+                    />
                     {team.maxAttempts !== undefined && (
                       <div className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
                         Attempts remaining: {Math.max(0, team.maxAttempts - team.attempts)}
@@ -215,9 +227,15 @@ export default function ParticipantView() {
       </main>
 
       <footer className="text-center py-4 font-mono text-[10px] tracking-[0.3em]" style={{ color: 'var(--text-dim)' }}>
-        <Link to="/leaderboard" className="hover:underline">
-          VIEW PUBLIC LEADERBOARD
-        </Link>
+        {settings.publicLeaderboardUnlocked ? (
+          <Link to="/leaderboard" className="hover:underline">
+            VIEW PUBLIC LEADERBOARD
+          </Link>
+        ) : (
+          <span aria-disabled="true" title="The coordinator has not released the public leaderboard yet." style={{ opacity: 0.55 }}>
+            🔒 PUBLIC LEADERBOARD LOCKED
+          </span>
+        )}
       </footer>
     </div>
   )
