@@ -6,7 +6,7 @@ import type {
   PuzzleSlotKey,
   InitialPuzzleSlotKey,
   HintLevel,
-} from '../types'
+} from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Client State Store
@@ -123,7 +123,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoreState>({
     teams: [],
     puzzleVersions: [],
-    settings: { defaultMaxTimeSeconds: 25 * 60, publicLeaderboardUnlocked: false },
+    settings: { defaultMaxTimeSeconds: 25 * 60, registrationOpen: true, publicLeaderboardUnlocked: false },
     activeTeamId: null,
     coordinator: false,
     syncStatus: 'connecting',

@@ -1,4 +1,4 @@
-import type { Team } from '../types'
+import type { Team } from '../types.js'
 
 /**
  * All timing is derived from absolute epoch timestamps stored on the Team

@@ -1,5 +1,5 @@
-import type { Team, TeamPuzzleAssignment, PuzzleVersion } from '../types'
-import { ALL_PUZZLE_SLOTS } from '../types'
+import type { Team, TeamPuzzleAssignment, PuzzleVersion } from '../types.js'
+import { ALL_PUZZLE_SLOTS } from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Team Factory

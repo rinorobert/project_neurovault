@@ -1,4 +1,4 @@
-import type { Team } from '../types'
+import type { Team } from '../types.js'
 
 /**
  * The minimal shape buildLeaderboard/the Leaderboard component actually

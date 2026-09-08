@@ -1,4 +1,4 @@
-import type { HintLevel } from '../types'
+import type { HintLevel } from '../types.js'
 
 // ============================================================================
 // Fixed 3-level hint penalty system.

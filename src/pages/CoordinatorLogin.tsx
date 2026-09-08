@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useStore } from '../state/store'
+import { useStore } from '../state/store.js'
 
 export default function CoordinatorLogin() {
   const navigate = useNavigate()

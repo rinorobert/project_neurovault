@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { Team } from '../types'
-import { useStore } from '../state/store'
+import type { Team } from '../types.js'
+import { useStore } from '../state/store.js'
 
 const REG_STATUS_COLOR: Record<Team['registrationStatus'], string> = {
   PENDING: 'var(--amber)',

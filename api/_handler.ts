@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'http'
-import { handleApiRoute } from '../src/server/apiRouter'
+import { handleApiRoute } from '../src/server/apiRouter.js'
 
 export default async function handler(
   req: IncomingMessage & { body?: any; query?: any },

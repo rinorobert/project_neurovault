@@ -1,4 +1,4 @@
-import type { ConstraintBreachVariant } from '../../types'
+import type { ConstraintBreachVariant } from '../../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Constraint Breach Variant Data (SERVER-ONLY)

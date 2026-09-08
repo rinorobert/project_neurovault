@@ -1,5 +1,5 @@
-import type { PuzzleVersion, Team, InitialPuzzleSlotKey } from '../types'
-import { INITIAL_PUZZLE_SLOTS } from '../types'
+import type { PuzzleVersion, Team, InitialPuzzleSlotKey } from '../types.js'
+import { INITIAL_PUZZLE_SLOTS } from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Recovery Code Resolver (SERVER-ONLY)

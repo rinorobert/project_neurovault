@@ -1,8 +1,8 @@
-import type { Team, HintLevel, InitialPuzzleSlotKey } from '../types'
-import type { PuzzleVersion } from '../types'
-import { elapsedMs } from '../lib/timer'
-import { hintPenaltyForCount, MAX_HINTS } from '../lib/hints'
-import { validateFinalCode, validateRecoveryCode } from '../lib/finalCode'
+import type { Team, HintLevel, InitialPuzzleSlotKey } from '../types.js'
+import type { PuzzleVersion } from '../types.js'
+import { elapsedMs } from '../lib/timer.js'
+import { hintPenaltyForCount, MAX_HINTS } from '../lib/hints.js'
+import { validateFinalCode, validateRecoveryCode } from '../lib/finalCode.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Pure Game Engine

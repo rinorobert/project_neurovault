@@ -1,6 +1,6 @@
-import type { Team } from '../types'
-import { INITIAL_PUZZLE_SLOTS, PUZZLE_SLOT_SYSTEM_TITLES } from '../types'
-import { areInitialPuzzlesCompleted } from '../engine/gameEngine'
+import type { Team } from '../types.js'
+import { INITIAL_PUZZLE_SLOTS, PUZZLE_SLOT_SYSTEM_TITLES } from '../types.js'
+import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
 
 export function PuzzleProgress({ team, compact = false }: { team: Team; compact?: boolean }) {
   const initialDone = areInitialPuzzlesCompleted(team)

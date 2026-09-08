@@ -2,8 +2,8 @@ import {
   solveConstraintBreach,
   validateConstraintBreachSubmission,
   deriveOverrideCodeFromPlacement,
-} from '../src/lib/constraintBreachSolver'
-import { CB_DEV_FIXTURE_VARIANTS } from '../src/server/puzzleData/constraintVariants'
+} from '../src/lib/constraintBreachSolver.js'
+import { CB_DEV_FIXTURE_VARIANTS } from '../src/server/puzzleData/constraintVariants.js'
 
 console.log('================================================================')
 console.log('CONSTRAINT BREACH — N-QUEENS SOLVER & FIXTURE VALIDATION')

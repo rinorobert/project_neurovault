@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import type { Team, PuzzleVersion, InitialPuzzleSlotKey } from '../types'
-import { ALL_PUZZLE_SLOTS, PUZZLE_SLOT_LABELS } from '../types'
-import { computeFinalCode } from '../lib/finalCode'
-import { useStore } from '../state/store'
-import { areInitialPuzzlesCompleted } from '../engine/gameEngine'
+import type { Team, PuzzleVersion, InitialPuzzleSlotKey } from '../types.js'
+import { ALL_PUZZLE_SLOTS, PUZZLE_SLOT_LABELS } from '../types.js'
+import { computeFinalCode } from '../lib/finalCode.js'
+import { useStore } from '../state/store.js'
+import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
 
 export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzleVersions: PuzzleVersion[] }) {
   const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride } = useStore()

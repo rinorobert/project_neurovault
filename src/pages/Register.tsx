@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useStore } from '../state/store'
+import { useStore } from '../state/store.js'
 
 export default function Register() {
   const { registerTeam } = useStore()

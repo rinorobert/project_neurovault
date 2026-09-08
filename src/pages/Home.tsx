@@ -1,8 +1,25 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 export default function Home() {
+  const [introVisible, setIntroVisible] = useState(true)
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-12 px-6">
+    <>
+      {introVisible && (
+        <video
+          className="fixed inset-0 z-50 h-screen w-screen object-cover bg-black transition-opacity duration-700"
+          src="/media/NV.mp4"
+          autoPlay
+          muted
+          playsInline
+          preload="metadata"
+          aria-label="Project NeuroVault introduction"
+          onEnded={() => setIntroVisible(false)}
+          onError={() => setIntroVisible(false)}
+        />
+      )}
+      <div className="min-h-screen flex flex-col items-center justify-center gap-12 px-6">
       <div className="text-center">
         <div className="font-display text-3xl sm:text-5xl font-bold tracking-[0.25em] flicker" style={{ color: 'var(--text-hi)' }}>
           PROJECT NEUROVAULT
@@ -51,6 +68,7 @@ export default function Home() {
           View Public Leaderboard →
         </Link>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

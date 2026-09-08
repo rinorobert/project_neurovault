@@ -261,6 +261,8 @@ export type ParticipantTeamView = Omit<
 
 export interface GameSettings {
   defaultMaxTimeSeconds: number // default 25 * 60
+  /** Public registrations are accepted only while this coordinator-controlled gate is open. */
+  registrationOpen: boolean
   /**
    * Coordinator-controlled gate for the public leaderboard page/endpoint.
    * Defaults to false (LOCKED) — the public leaderboard reveals nothing
@@ -302,6 +304,11 @@ export type AuditEventType =
   | 'RESULT_DELETED'
   | 'PUBLIC_LEADERBOARD_UNLOCKED'
   | 'PUBLIC_LEADERBOARD_LOCKED'
+  | 'REGISTRATION_OPENED'
+  | 'REGISTRATION_CLOSED'
+  | 'PUZZLE_VARIANT_CREATED'
+  | 'PUZZLE_VARIANT_UPDATED'
+  | 'PUZZLE_VARIANT_ASSIGNED'
   | 'COORDINATOR_LOGIN'
   | 'COORDINATOR_LOGIN_FAILED'
 

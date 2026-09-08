@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { Team, PuzzleVersion } from '../types'
-import { formatDuration } from '../lib/timer'
-import { PUZZLE_SLOT_LABELS, ALL_PUZZLE_SLOTS } from '../types'
+import type { Team, PuzzleVersion } from '../types.js'
+import { formatDuration } from '../lib/timer.js'
+import { PUZZLE_SLOT_LABELS, ALL_PUZZLE_SLOTS } from '../types.js'
 
 const REG_STATUS_COLOR: Record<Team['registrationStatus'], string> = {
   PENDING: 'var(--amber)',

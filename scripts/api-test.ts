@@ -2,11 +2,11 @@ process.env.NODE_ENV = process.env.NODE_ENV ?? 'test'
 process.env.COORDINATOR_PIN = 'test-pin-9182'
 delete process.env.DATABASE_URL // force the in-memory repository for this test run
 
-import { handleApiRoute, type ApiRequest } from '../src/server/apiRouter'
-import { getDatabase, __resetDatabaseForTests } from '../src/server/db/client'
-import { CB_DEV_FIXTURE_VARIANTS } from '../src/server/puzzleData/constraintVariants'
-import { DEV_FIXTURE_PUZZLE_VERSIONS } from '../src/data/devFixtures'
-import { deriveOverrideCodeFromPlacement } from '../src/lib/constraintBreachSolver'
+import { handleApiRoute, type ApiRequest } from '../src/server/apiRouter.js'
+import { getDatabase, __resetDatabaseForTests } from '../src/server/db/client.js'
+import { CB_DEV_FIXTURE_VARIANTS } from '../src/server/puzzleData/constraintVariants.js'
+import { DEV_FIXTURE_PUZZLE_VERSIONS } from '../src/data/devFixtures.js'
+import { deriveOverrideCodeFromPlacement } from '../src/lib/constraintBreachSolver.js'
 
 let failures = 0
 function check(label: string, cond: boolean, extra?: unknown) {

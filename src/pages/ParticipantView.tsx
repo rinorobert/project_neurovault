@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useStore } from '../state/store'
-import { CountdownTimer } from '../components/CountdownTimer'
-import { PuzzleProgress } from '../components/PuzzleProgress'
-import { CodeEntry } from '../components/CodeEntry'
-import { SuccessScreen } from '../components/SuccessScreen'
-import { AccessDenied, TimeExpiredScreen } from '../components/FailureScreen'
-import { areInitialPuzzlesCompleted } from '../engine/gameEngine'
+import { useStore } from '../state/store.js'
+import { CountdownTimer } from '../components/CountdownTimer.js'
+import { PuzzleProgress } from '../components/PuzzleProgress.js'
+import { CodeEntry } from '../components/CodeEntry.js'
+import { SuccessScreen } from '../components/SuccessScreen.js'
+import { AccessDenied, TimeExpiredScreen } from '../components/FailureScreen.js'
+import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
 
 function StandbyScreen() {
   return (

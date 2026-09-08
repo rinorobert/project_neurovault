@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useStore } from '../state/store'
+import { useStore } from '../state/store.js'
 
 export function SettingsPanel() {
   const { settings, updateSettings } = useStore()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(true)
 
   return (
     <div className="rounded-md" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
@@ -37,6 +37,19 @@ export function SettingsPanel() {
 
           <div className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
             Hint penalties are fixed: Hint 1 = +00:30, Hint 2 = +01:00, Hint 3 = +01:30 (max 3 per team).
+          </div>
+
+          <div className="pt-3 border-t flex flex-col gap-2" style={{ borderColor: 'var(--line)' }}>
+            <div className="font-mono text-xs flex items-center gap-2" style={{ color: 'var(--text-mid)' }}>
+              REGISTRATION:
+              <span className="px-1.5 py-0.5 rounded-sm text-[10px] uppercase tracking-wider" style={{ border: `1px solid ${settings.registrationOpen ? 'var(--green)' : 'var(--red)'}`, color: settings.registrationOpen ? 'var(--green)' : 'var(--red)' }}>
+                {settings.registrationOpen ? 'Open' : 'Closed'}
+              </span>
+            </div>
+            <div className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>Controls the public registration page and API server-side. Existing teams are unaffected.</div>
+            <button onClick={() => updateSettings({ registrationOpen: !settings.registrationOpen })} className="font-mono text-[11px] uppercase tracking-wider px-3 py-2 rounded-sm self-start" style={{ border: `1px solid ${settings.registrationOpen ? 'var(--red)' : 'var(--green)'}`, color: settings.registrationOpen ? 'var(--red)' : 'var(--green)' }}>
+              {settings.registrationOpen ? 'Close Registration' : 'Open Registration'}
+            </button>
           </div>
 
           <div className="pt-3 border-t flex flex-col gap-2" style={{ borderColor: 'var(--line)' }}>

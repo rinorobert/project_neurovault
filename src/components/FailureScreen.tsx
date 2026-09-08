@@ -1,5 +1,5 @@
-import type { Team } from '../types'
-import { formatDuration } from '../lib/timer'
+import type { Team } from '../types.js'
+import { formatDuration } from '../lib/timer.js'
 
 export function AccessDenied({ attemptsRemaining }: { attemptsRemaining: number | null }) {
   return (

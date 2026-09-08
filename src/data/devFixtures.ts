@@ -1,4 +1,4 @@
-import type { PuzzleVersion, Team } from '../types'
+import type { PuzzleVersion, Team } from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — DEV / TEST FIXTURES ONLY

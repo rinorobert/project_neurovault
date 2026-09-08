@@ -1,7 +1,7 @@
-import type { Team, HintLevel } from '../types'
-import { HINT_PENALTIES_SECONDS, MAX_HINTS, hintPenaltyForCount } from '../lib/hints'
-import { formatDuration } from '../lib/timer'
-import { useStore } from '../state/store'
+import type { Team, HintLevel } from '../types.js'
+import { HINT_PENALTIES_SECONDS, MAX_HINTS, hintPenaltyForCount } from '../lib/hints.js'
+import { formatDuration } from '../lib/timer.js'
+import { useStore } from '../state/store.js'
 
 function formatPenalty(seconds: number): string {
   return `+${formatDuration(seconds)}`

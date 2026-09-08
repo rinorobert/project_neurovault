@@ -1,4 +1,4 @@
-import type { PuzzleVersion, PuzzleSlotKey } from '../types'
+import type { PuzzleVersion, PuzzleSlotKey } from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Production Puzzle Slot Defaults

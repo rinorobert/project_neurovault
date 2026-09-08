@@ -1,6 +1,6 @@
-import type { InitialPuzzleSlotKey, PuzzleSlotKey, Team, HintLevel, ConstraintBreachSubmission } from '../types'
-import { getDatabase, type DatabaseRepository } from './db/client'
-import { verifyCoordinatorPin } from './auth'
+import type { InitialPuzzleSlotKey, PuzzleSlotKey, Team, HintLevel, ConstraintBreachSubmission, PuzzleVersion } from '../types.js'
+import { getDatabase, type DatabaseRepository } from './db/client.js'
+import { verifyCoordinatorPin } from './auth.js'
 import {
   parseCookies,
   verifyCoordinatorSessionToken,
@@ -8,20 +8,20 @@ import {
   buildSessionCookie,
   buildClearSessionCookie,
   COORDINATOR_SESSION_COOKIE,
-} from './security'
-import * as engine from '../engine/gameEngine'
-import { buildLeaderboard } from '../lib/leaderboard'
-import { solveConstraintBreach, validateConstraintBreachSubmission, deriveOverrideCodeFromPlacement } from '../lib/constraintBreachSolver'
-import { getConstraintVariantById } from './puzzleData/constraintVariants'
-import { newTeamDraft, defaultPuzzleAssignments } from '../data/teams'
-import { normalizeIndianMobile } from './validation'
+} from './security.js'
+import * as engine from '../engine/gameEngine.js'
+import { buildLeaderboard } from '../lib/leaderboard.js'
+import { solveConstraintBreach, validateConstraintBreachSubmission, deriveOverrideCodeFromPlacement } from '../lib/constraintBreachSolver.js'
+import { getConstraintVariantById } from './puzzleData/constraintVariants.js'
+import { newTeamDraft, defaultPuzzleAssignments } from '../data/teams.js'
+import { normalizeIndianMobile } from './validation.js'
 import {
   toParticipantTeamView,
   toParticipantPuzzleView,
   toParticipantConstraintView,
   toPublicLeaderboardTeamView,
-} from './sanitize'
-import { logAudit } from './audit'
+} from './sanitize.js'
+import { logAudit } from './audit.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Unified API Router
@@ -60,6 +60,21 @@ function isProduction(): boolean {
 function isCoordinatorRequest(req: ApiRequest): boolean {
   const cookies = parseCookies(req.headers['cookie'] as string | undefined)
   return verifyCoordinatorSessionToken(cookies[COORDINATOR_SESSION_COOKIE])
+}
+
+function isValidPuzzleVersion(value: unknown): value is PuzzleVersion {
+  const item = value as Partial<PuzzleVersion> | null
+  return Boolean(
+    item && typeof item.id === 'string' && /^[A-Za-z0-9_-]{3,80}$/.test(item.id) &&
+    ['SLOT_1', 'SLOT_2', 'SLOT_3', 'SLOT_4', 'FINAL_SLOT'].includes(item.slot ?? '') &&
+    typeof item.version === 'string' && item.version.trim() !== '' &&
+    typeof item.title === 'string' && item.title.trim() !== '' &&
+    typeof item.category === 'string' &&
+    ['easy', 'medium', 'hard'].includes(item.difficulty ?? '') &&
+    ['DESIGN_PENDING', 'CONFIGURED', 'EXPERIMENTAL'].includes(item.status ?? '') &&
+    ['COORDINATOR_ONLY', 'SERVER_VALIDATED', 'DEV_SHORTCUT'].includes(item.completionMode ?? '') &&
+    typeof item.clue === 'string'
+  )
 }
 
 interface MutationOutcome {
@@ -187,6 +202,10 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
     // Public Registration (POST /api/register) — status starts PENDING
     // -----------------------------------------------------------------------
     if (pathname === '/api/register' && method === 'POST') {
+      const settings = await db.getSettings()
+      if (!settings.registrationOpen) {
+        return { statusCode: 403, headers: jsonHeaders, body: { error: 'Registration is currently closed.' } }
+      }
       const { teamName, players, captain, contactEmail, contactMobile } = req.body || {}
       const members: string[] = Array.isArray(players) ? players.map((p: string) => String(p).trim()).filter(Boolean) : []
 
@@ -211,7 +230,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         }
       }
 
-      const [puzzleVersions, settings] = await Promise.all([db.getPuzzleVersions(), db.getSettings()])
+      const puzzleVersions = await db.getPuzzleVersions()
       const draft = newTeamDraft({
         name: teamName.trim(),
         members,
@@ -273,6 +292,13 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         await logAudit(
           db,
           updated.publicLeaderboardUnlocked ? 'PUBLIC_LEADERBOARD_UNLOCKED' : 'PUBLIC_LEADERBOARD_LOCKED',
+          { actor: 'coordinator', now }
+        )
+      }
+      if (before.registrationOpen !== updated.registrationOpen) {
+        await logAudit(
+          db,
+          updated.registrationOpen ? 'REGISTRATION_OPENED' : 'REGISTRATION_CLOSED',
           { actor: 'coordinator', now }
         )
       }
@@ -339,6 +365,48 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
     }
 
     // -----------------------------------------------------------------------
+    // Puzzle variants (PuzzleVersion records) — coordinator only
+    // -----------------------------------------------------------------------
+    if (pathname === '/api/puzzle-versions' && method === 'GET') {
+      const authError = requireCoordinator()
+      if (authError) return authError
+      return { statusCode: 200, headers: jsonHeaders, body: { puzzleVersions: await db.getPuzzleVersions() } }
+    }
+
+    if (pathname === '/api/puzzle-versions' && method === 'POST') {
+      const authError = requireCoordinator()
+      if (authError) return authError
+      const variant = req.body as PuzzleVersion
+      if (!isValidPuzzleVersion(variant)) {
+        return { statusCode: 400, headers: jsonHeaders, body: { error: 'Malformed puzzle variant payload.' } }
+      }
+      const existing = await db.getPuzzleVersions()
+      if (existing.some((item) => item.id === variant.id)) {
+        return { statusCode: 409, headers: jsonHeaders, body: { error: 'A variant with this ID already exists.' } }
+      }
+      await db.savePuzzleVersion(variant)
+      await logAudit(db, 'PUZZLE_VARIANT_CREATED', { actor: 'coordinator', now, metadata: { variantId: variant.id, slot: variant.slot } })
+      return { statusCode: 201, headers: jsonHeaders, body: { puzzleVersion: variant } }
+    }
+
+    const variantMatch = pathname.match(/^\/api\/puzzle-versions\/([^/]+)$/)
+    if (variantMatch && method === 'PATCH') {
+      const authError = requireCoordinator()
+      if (authError) return authError
+      const variant = req.body as PuzzleVersion
+      if (variant.id !== variantMatch[1] || !isValidPuzzleVersion(variant)) {
+        return { statusCode: 400, headers: jsonHeaders, body: { error: 'Malformed puzzle variant payload.' } }
+      }
+      const existing = await db.getPuzzleVersions()
+      if (!existing.some((item) => item.id === variant.id)) {
+        return { statusCode: 404, headers: jsonHeaders, body: { error: 'Puzzle variant not found.' } }
+      }
+      await db.savePuzzleVersion(variant)
+      await logAudit(db, 'PUZZLE_VARIANT_UPDATED', { actor: 'coordinator', now, metadata: { variantId: variant.id, slot: variant.slot } })
+      return { statusCode: 200, headers: jsonHeaders, body: { puzzleVersion: variant } }
+    }
+
+    // -----------------------------------------------------------------------
     // Teams Collection (/api/teams) — coordinator only
     // -----------------------------------------------------------------------
     if (pathname === '/api/teams' && method === 'GET') {
@@ -392,6 +460,9 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
 
       if (subpath === 'recovery-code/verify' && method === 'POST') {
         const code = String(req.body?.code ?? '')
+        if (!/^\d{4}$/.test(code)) {
+          return { statusCode: 400, headers: jsonHeaders, body: { error: 'Recovery code must contain exactly 4 digits.' } }
+        }
         const puzzleVersions = await db.getPuzzleVersions()
         const outcome = await withTeamMutation(
           db, teamId, now,
@@ -473,6 +544,9 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
 
       if (subpath === 'final-code/verify' && method === 'POST') {
         const code = String(req.body?.code ?? '')
+        if (!/^\d{8}$/.test(code)) {
+          return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final override code must contain exactly 8 digits.' } }
+        }
         const puzzleVersions = await db.getPuzzleVersions()
         let correct = false
         const outcome = await withTeamMutation(
@@ -517,6 +591,16 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         const expectedVersion = typeof body.expectedVersion === 'number' ? (body.expectedVersion as number) : undefined
         delete body.expectedVersion
 
+        if (body.puzzleAssignments !== undefined) {
+          const assignments = body.puzzleAssignments as Team['puzzleAssignments']
+          const variants = await db.getPuzzleVersions()
+          const valid = Array.isArray(assignments) && assignments.length === 5 && assignments.every((assignment) =>
+            typeof assignment?.slot === 'string' && typeof assignment?.puzzleVersionId === 'string' &&
+            variants.some((variant) => variant.id === assignment.puzzleVersionId && variant.slot === assignment.slot)
+          )
+          if (!valid) return { statusCode: 400, headers: jsonHeaders, body: { error: 'Puzzle assignments must reference a matching saved variant for every slot.' } }
+        }
+
         if (body.contactMobile !== undefined) {
           const normalizedMobile = normalizeIndianMobile(body.contactMobile)
           if (!normalizedMobile) {
@@ -557,6 +641,9 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           })
         } else {
           await logAudit(db, 'TEAM_EDITED', { teamId, actor: 'coordinator', now })
+          if ('puzzleAssignments' in patch) {
+            await logAudit(db, 'PUZZLE_VARIANT_ASSIGNED', { teamId, actor: 'coordinator', now })
+          }
         }
         return { statusCode: 200, headers: jsonHeaders, body: { team: result.team } }
       }

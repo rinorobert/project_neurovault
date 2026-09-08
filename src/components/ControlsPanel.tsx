@@ -1,7 +1,7 @@
-import type { Team } from '../types'
-import { CountdownTimer } from './CountdownTimer'
-import { useStore } from '../state/store'
-import { formatDuration } from '../lib/timer'
+import type { Team } from '../types.js'
+import { CountdownTimer } from './CountdownTimer.js'
+import { useStore } from '../state/store.js'
+import { formatDuration } from '../lib/timer.js'
 
 function ActionButton({
   label,

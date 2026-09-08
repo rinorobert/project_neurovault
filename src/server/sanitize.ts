@@ -5,7 +5,7 @@ import type {
   ParticipantPuzzleView,
   ConstraintBreachVariant,
   ParticipantConstraintView,
-} from '../types'
+} from '../types.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Participant-Safe Serialization

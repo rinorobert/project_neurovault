@@ -1,7 +1,7 @@
 import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
-import type { Team, PuzzleVersion, GameSettings, AuditEvent } from '../../types'
-import { PRODUCTION_PUZZLE_VERSIONS } from '../../data/puzzles'
-import { generateRandomAlphanumeric } from '../security'
+import type { Team, PuzzleVersion, GameSettings, AuditEvent } from '../../types.js'
+import { PRODUCTION_PUZZLE_VERSIONS } from '../../data/puzzles.js'
+import { generateRandomAlphanumeric } from '../security.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Database & Persistent Storage Layer
@@ -62,7 +62,7 @@ const DELETE_TOKEN_TTL_MS = 5 * 60 * 1000
 class InMemoryRepository implements DatabaseRepository {
   private teams: Map<string, Team> = new Map()
   private puzzleVersions: Map<string, PuzzleVersion> = new Map()
-  private settings: GameSettings = { defaultMaxTimeSeconds: 25 * 60, publicLeaderboardUnlocked: false }
+  private settings: GameSettings = { defaultMaxTimeSeconds: 25 * 60, registrationOpen: true, publicLeaderboardUnlocked: false }
   private activeTeamId: string | null = null
   private auditEvents: AuditEvent[] = []
   private deleteTokens: Map<string, { token: string; expiresAt: number }> = new Map()
@@ -333,7 +333,11 @@ class NeonPostgresRepository implements DatabaseRepository {
   async getSettings(): Promise<GameSettings> {
     await this.ensureSchema()
     const rows = await this.sql`SELECT value FROM nv_app_state WHERE key = 'settings'`
-    return rows.length > 0 ? ((rows[0] as any).value as GameSettings) : { defaultMaxTimeSeconds: 25 * 60, publicLeaderboardUnlocked: false }
+    if (rows.length > 0) {
+      const stored = (rows[0] as any).value as Partial<GameSettings>
+      return { ...stored, registrationOpen: stored.registrationOpen ?? true } as GameSettings
+    }
+    return { defaultMaxTimeSeconds: 25 * 60, registrationOpen: true, publicLeaderboardUnlocked: false }
   }
 
   async updateSettings(patch: Partial<GameSettings>): Promise<GameSettings> {

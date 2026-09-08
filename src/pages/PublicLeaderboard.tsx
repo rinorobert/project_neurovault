@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Leaderboard } from '../components/Leaderboard'
-import type { LeaderboardRow, LeaderboardTeamLike } from '../lib/leaderboard'
+import { Leaderboard } from '../components/Leaderboard.js'
+import type { LeaderboardRow, LeaderboardTeamLike } from '../lib/leaderboard.js'
 
 const POLL_INTERVAL_MS = 3000
 

@@ -1,14 +1,15 @@
 import { useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useStore } from '../state/store'
-import { TeamSelector } from '../components/TeamSelector'
-import { PuzzleConfigPanel } from '../components/PuzzleConfigPanel'
-import { ControlsPanel } from '../components/ControlsPanel'
-import { HintPanel } from '../components/HintPanel'
-import { TeamManagerPanel } from '../components/TeamManagerPanel'
-import { TeamRoster } from '../components/TeamRoster'
-import { SettingsPanel } from '../components/SettingsPanel'
-import { Leaderboard } from '../components/Leaderboard'
+import { useStore } from '../state/store.js'
+import { TeamSelector } from '../components/TeamSelector.js'
+import { PuzzleConfigPanel } from '../components/PuzzleConfigPanel.js'
+import { ControlsPanel } from '../components/ControlsPanel.js'
+import { HintPanel } from '../components/HintPanel.js'
+import { TeamManagerPanel } from '../components/TeamManagerPanel.js'
+import { TeamRoster } from '../components/TeamRoster.js'
+import { SettingsPanel } from '../components/SettingsPanel.js'
+import { Leaderboard } from '../components/Leaderboard.js'
+import { AuditLogPanel } from '../components/AuditLogPanel.js'
 
 export default function CoordinatorDashboard() {
   const navigate = useNavigate()
@@ -79,19 +80,13 @@ export default function CoordinatorDashboard() {
         <TeamSelector teams={teams} activeTeamId={activeTeam?.id ?? null} onSelect={setActiveTeamId} />
       </div>
 
-      <TeamRoster teams={teams} puzzleVersions={puzzleVersions} activeTeamId={activeTeam?.id ?? null} onSelect={setActiveTeamId} />
+      <section className="flex flex-col gap-3"><h2 className="font-mono text-xs tracking-[0.3em]" style={{ color: 'var(--cyan)' }}>REGISTRATION</h2><TeamRoster teams={teams} puzzleVersions={puzzleVersions} activeTeamId={activeTeam?.id ?? null} onSelect={setActiveTeamId} /><TeamManagerPanel team={activeTeam} /></section>
 
       {activeTeam ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="flex flex-col gap-6">
-            <ControlsPanel team={activeTeam} />
-            <HintPanel team={activeTeam} />
-            <TeamManagerPanel team={activeTeam} />
-          </div>
-          <div className="flex flex-col gap-6">
-            <PuzzleConfigPanel team={activeTeam} puzzleVersions={puzzleVersions} />
-          </div>
-        </div>
+        <>
+          <section className="flex flex-col gap-3"><h2 className="font-mono text-xs tracking-[0.3em]" style={{ color: 'var(--cyan)' }}>CURRENT EVENT</h2><div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ControlsPanel team={activeTeam} /><HintPanel team={activeTeam} /></div></section>
+          <section className="flex flex-col gap-3"><h2 className="font-mono text-xs tracking-[0.3em]" style={{ color: 'var(--cyan)' }}>PUZZLE CONFIGURATION</h2><PuzzleConfigPanel team={activeTeam} puzzleVersions={puzzleVersions} /></section>
+        </>
       ) : (
         <div
           className="rounded-md p-10 text-center font-mono text-sm"
@@ -101,14 +96,12 @@ export default function CoordinatorDashboard() {
         </div>
       )}
 
-      {!activeTeam && <TeamManagerPanel team={null} />}
+      <section className="flex flex-col gap-3"><h2 className="font-mono text-xs tracking-[0.3em]" style={{ color: 'var(--cyan)' }}>EVENT SETTINGS</h2><SettingsPanel /></section>
 
-      <SettingsPanel />
-
-      <div className="flex flex-col gap-3">
+      <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="font-mono text-xs tracking-[0.25em]" style={{ color: 'var(--text-dim)' }}>
-            LEADERBOARD
+            RESULTS / LEADERBOARD
           </div>
           <Link
             to="/leaderboard"
@@ -120,7 +113,8 @@ export default function CoordinatorDashboard() {
           </Link>
         </div>
         <Leaderboard teams={teams} />
-      </div>
+      </section>
+      <AuditLogPanel />
     </div>
   )
 }

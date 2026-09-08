@@ -1,4 +1,4 @@
-import type { Team } from '../types'
+import type { Team } from '../types.js'
 
 const STATUS_DOT: Record<Team['status'], string> = {
   NOT_STARTED: 'var(--text-dim)',

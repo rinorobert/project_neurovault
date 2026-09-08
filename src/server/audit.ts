@@ -1,6 +1,6 @@
-import type { AuditEvent, AuditEventType } from '../types'
-import type { DatabaseRepository } from './db/client'
-import { generateId } from './security'
+import type { AuditEvent, AuditEventType } from '../types.js'
+import type { DatabaseRepository } from './db/client.js'
+import { generateId } from './security.js'
 
 export async function logAudit(
   db: DatabaseRepository,

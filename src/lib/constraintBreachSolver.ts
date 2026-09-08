@@ -1,4 +1,4 @@
-import type { CellCoord, ConstraintBreachVariant } from '../types'
+import type { CellCoord, ConstraintBreachVariant } from '../types.js'
 
 // ============================================================================
 // CONSTRAINT BREACH — N-QUEENS SOLVER & SUBMISSION VALIDATOR

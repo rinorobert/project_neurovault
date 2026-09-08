@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { handleApiRoute } from './src/server/apiRouter'
+import { handleApiRoute } from './src/server/apiRouter.js'
 
 function apiDevMiddleware() {
   return {

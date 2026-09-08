@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { Team } from '../types'
-import { formatDuration } from '../lib/timer'
+import type { Team } from '../types.js'
+import { formatDuration } from '../lib/timer.js'
 
 export function SuccessScreen({ team, playSound = true }: { team: Team; playSound?: boolean }) {
   const played = useRef(false)

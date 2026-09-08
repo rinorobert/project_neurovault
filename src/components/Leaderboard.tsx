@@ -1,6 +1,6 @@
-import type { Team } from '../types'
-import { buildLeaderboard, type LeaderboardTeamLike } from '../lib/leaderboard'
-import { formatDuration } from '../lib/timer'
+import type { Team } from '../types.js'
+import { buildLeaderboard, type LeaderboardTeamLike } from '../lib/leaderboard.js'
+import { formatDuration } from '../lib/timer.js'
 
 const STATUS_LABEL: Record<Team['status'], string> = {
   NOT_STARTED: 'Not Started',

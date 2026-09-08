@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import type { Team } from '../types'
-import { remainingMs, formatClock } from '../lib/timer'
-import { useStore } from '../state/store'
+import type { Team } from '../types.js'
+import { remainingMs, formatClock } from '../lib/timer.js'
+import { useStore } from '../state/store.js'
 
 export function CountdownTimer({ team, size = 'large' }: { team: Team; size?: 'large' | 'compact' }) {
   const { tick } = useStore() // subscribing to the global 1s ticker forces a re-render every second
