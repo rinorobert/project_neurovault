@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   PROJECT BLACKOUT — Design tokens
+   A compromised campus security AI, not a generic admin panel.
+   ----------------------------------------------------------------------------
+   Palette:
+     --bg-void     #05080C   deepest background
+     --bg-panel    #0B121A   panel surfaces
+     --bg-raised   #121B26   raised/interactive surfaces
+     --line        #1E2C3A   hairline borders
+     --cyan        #4CE0D2   system nominal / active accent
+     --amber       #FFB020   caution / hints / pending
+     --red         #FF3B4E   critical / denied / expired
+     --green       #35E28C   success / escaped
+     --text-hi     #E9F4F4   primary text
+     --text-mid    #93A7B4   secondary text
+     --text-dim    #4C606E   tertiary / disabled text
+
+   Type:
+     Display  — condensed uppercase, wide tracking, system stack (no external font dependency)
+     Mono     — data readouts, timer, codes
+     Body     — descriptions, hint text
+============================================================================ */
+
+:root {
+  --bg-void: #05080c;
+  --bg-panel: #0b121a;
+  --bg-raised: #121b26;
+  --line: #1e2c3a;
+  --cyan: #4ce0d2;
+  --amber: #ffb020;
+  --red: #ff3b4e;
+  --green: #35e28c;
+  --text-hi: #e9f4f4;
+  --text-mid: #93a7b4;
+  --text-dim: #4c606e;
+
+  --font-display: "Chakra Petch", "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  --font-body: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-void);
+  color: var(--text-hi);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(76, 224, 210, 0.07), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(255, 59, 78, 0.05), transparent 45%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--cyan);
+  color: var(--bg-void);
+}
+
+/* Scanline texture overlay used behind participant screens for the
+   "compromised terminal" feel. Applied via .scanlines utility class. */
+.scanlines {
+  position: relative;
+}
+.scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0px,
+    rgba(255, 255, 255, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+/* Signature sweep: a slow diagonal light sweep across hero panels */
+@keyframes sweep {
+  0% {
+    transform: translateX(-120%) translateY(-120%) rotate(20deg);
+  }
+  100% {
+    transform: translateX(120%) translateY(120%) rotate(20deg);
+  }
+}
+.sweep-layer {
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.sweep-layer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 220%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(76, 224, 210, 0.05) 45%,
+    rgba(76, 224, 210, 0.09) 50%,
+    transparent 55%
+  );
+  animation: sweep 9s linear infinite;
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.pulse {
+  animation: pulseGlow 1.4s ease-in-out infinite;
+}
+
+@keyframes flicker {
+  0%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.4;
+  }
+  95% {
+    opacity: 0.85;
+  }
+  96% {
+    opacity: 0.3;
+  }
+  97% {
+    opacity: 1;
+  }
+}
+.flicker {
+  animation: flicker 6s ease-in-out infinite;
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fadeUp 0.4s ease-out both;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Segmented digit box, used for the final code entry / readouts */
+.digit-box {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep-layer::after,
+  .pulse,
+  .flicker,
+  .shake,
+  .fade-up {
+    animation: none !important;
+  }
+}
