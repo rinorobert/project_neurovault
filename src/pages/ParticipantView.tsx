@@ -140,11 +140,11 @@ export default function ParticipantView() {
             )}
 
             {!notStarted && (
-              <div className="w-full max-w-md flex flex-col items-center gap-4">
+              <div className={`w-full ${canEnterConstraintBreach ? 'max-w-6xl' : 'max-w-md'} flex flex-col items-center gap-4 transition-all duration-300`}>
                 {canEnterRecoveryCode ? (
                   <>
-                    <div className="font-mono text-xs tracking-[0.3em] text-center" style={{ color: 'var(--cyan)' }}>
-                      ENTER NEUROVAULT // RECOVERY CODE
+                    <div className="font-mono text-xs sm:text-sm tracking-[0.3em] font-bold text-center" style={{ color: 'var(--cyan)' }}>
+                      RECOVERY CODE
                     </div>
                     <div className="font-mono text-[11px] text-center max-w-sm" style={{ color: 'var(--text-dim)' }}>
                       Combine each module's digit in order — Module 01, 02, 03, 04 — to unlock the final module.
@@ -154,10 +154,10 @@ export default function ParticipantView() {
                       onSubmit={handleRecoverySubmit}
                       disabled={paused}
                       shake={recoveryShake}
-                      submitLabel="Unlock Final Module"
+                      submitLabel="UNLOCK FINAL MODULE"
                     />
                     {recoveryWrong && (
-                      <div className="font-mono text-xs tracking-widest" style={{ color: 'var(--red)' }}>
+                      <div className="font-mono text-xs tracking-widest text-center" style={{ color: 'var(--red)' }}>
                         RECOVERY CODE REJECTED — VERIFY EACH MODULE'S DIGIT.
                       </div>
                     )}

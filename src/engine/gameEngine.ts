@@ -208,11 +208,14 @@ export function submitCode(
   }
 
   // Final code requires all four initial modules, the independently
-  // validated recovery-code unlock, and the enabled/completed final module.
+  // validated recovery-code unlock, and a coordinator-confirmed physical
+  // Constraint Breach completion. Enabling the final module only opens the
+  // physical-board briefing; it must never bypass that completion state.
   if (
     !areInitialPuzzlesCompleted(team) ||
     !team.recoveryCodeUnlocked ||
-    (!team.finalPuzzleCompleted && !team.finalModuleEnabled)
+    !team.finalModuleEnabled ||
+    !team.finalPuzzleCompleted
   ) {
     return {
       patch: {},

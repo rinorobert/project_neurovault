@@ -30,7 +30,7 @@ const CB_VARIANTS_CONFIG = [
 ]
 
 export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzleVersions: PuzzleVersion[] }) {
-  const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride, assignConstraintVariant } = useStore()
+  const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride, assignConstraintVariant, completeConstraintBreachAction } = useStore()
   const [editingCode, setEditingCode] = useState(false)
   const [codeDraft, setCodeDraft] = useState('')
 
@@ -103,7 +103,10 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                       <input
                         type="checkbox"
                         checked={isDone}
-                        onChange={(e) => updateTeam(team.id, { finalPuzzleCompleted: e.target.checked })}
+                        disabled={isDone || !isEnabled || !team.recoveryCodeUnlocked}
+                        onChange={(e) => {
+                          if (e.target.checked) void completeConstraintBreachAction(team.id)
+                        }}
                         className="w-4 h-4 accent-[var(--green)]"
                       />
                       <span>Physical Grid Solved</span>

@@ -79,6 +79,7 @@ interface StoreContextValue extends StoreState {
   setPuzzleVersion: (teamId: string, slot: PuzzleSlotKey, puzzleVersionId: string) => Promise<void>
   changeFinalCodeOverride: (teamId: string, code: string | undefined) => Promise<void>
   assignConstraintVariant: (teamId: string, variantId: string) => Promise<void>
+  requestConstraintBreachHint: (teamId: string) => Promise<{ success: boolean }>
   useConstraintBreachHint: (teamId: string) => Promise<{ success: boolean }>
   completeConstraintBreachAction: (teamId: string) => Promise<{ correct: boolean }>
   fetchConstraintBreach: (teamId: string) => Promise<ParticipantConstraintView | null>
@@ -171,7 +172,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const applyTeam = useCallback((team: Team | undefined) => {
     if (!team) return
-    setState((s) => ({ ...s, teams: s.teams.map((t) => (t.id === team.id ? team : t)) }))
+    setState((s) => {
+      const exists = s.teams.some((t) => t.id === team.id)
+      const nextTeams = exists
+        ? s.teams.map((t) => (t.id === team.id ? team : t))
+        : [...s.teams, team]
+      return { ...s, teams: nextTeams }
+    })
   }, [])
 
   const mutateTeam = useCallback(
@@ -263,6 +270,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     assignConstraintVariant: async (teamId, variantId) => {
       await mutateTeam(teamId, '', { method: 'PATCH', body: JSON.stringify({ constraintBreachVariantId: variantId }) })
+    },
+
+    requestConstraintBreachHint: async (teamId) => {
+      const result = await apiFetch(`/api/teams/${teamId}/constraint-breach/hint`, { method: 'POST' })
+      if (result.ok && result.body?.team) applyTeam(result.body.team)
+      return { success: Boolean(result.ok) }
     },
 
     useConstraintBreachHint: async (teamId) => {

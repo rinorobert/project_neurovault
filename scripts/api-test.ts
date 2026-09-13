@@ -882,6 +882,20 @@ async function run() {
     })
     check('Coordinator enables final module for team', enableRes.body.team.finalModuleEnabled === true)
 
+    // Regression guard: a legacy four-digit recovery-code override must never
+    // shadow the assigned Constraint Breach variant's eight-digit override.
+    const legacyOverride = await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { finalCodeOverride: '0000' },
+    })
+    check('Coordinator can retain a legacy recovery-code override without changing the assigned Puzzle 5 variant', legacyOverride.statusCode === 200)
+
+    const beforePhysicalConfirmation = await call('POST', `/api/teams/${tId}/final-code/verify`, {
+      body: { code: '36271485' },
+    })
+    check('Final override is rejected until the physical board is confirmed', beforePhysicalConfirmation.body.correct === false)
+    check('Pre-confirmation final override does not create an attempt', beforePhysicalConfirmation.body.team.attempts === 0)
+
     // Participant requests Hint 1 for Constraint Breach
     const hintRes = await call('POST', `/api/teams/${tId}/constraint-breach/hint`)
     check('Participant can request Constraint Breach Hint 1 (+30s penalty)', hintRes.statusCode === 200 && hintRes.body.success === true)
@@ -891,7 +905,10 @@ async function run() {
     check('Constraint Breach view after Hint 1 includes 4 forbidden cells', viewAfterHint.body.variant.forbiddenCells.length === 4)
 
     // Physical puzzle solved confirmation
-    const completeRes = await call('POST', `/api/teams/${tId}/constraint-breach/complete`)
+    const noAuthPhysicalConfirm = await call('POST', `/api/teams/${tId}/constraint-breach/complete`)
+    check('Participant cannot self-confirm physical grid restoration (401)', noAuthPhysicalConfirm.statusCode === 401)
+
+    const completeRes = await call('POST', `/api/teams/${tId}/constraint-breach/complete`, { cookie: coordinatorCookie })
     check('Confirming physical grid restoration sets finalPuzzleCompleted', completeRes.body.team.finalPuzzleCompleted === true)
     check('Constraint Breach completion does NOT escape the team', completeRes.body.team.status === 'RUNNING')
 
@@ -907,6 +924,7 @@ async function run() {
       body: { code: '36271485' },
     })
     check('Correct 8-digit override for CB-02 is accepted', correctOverride.body.correct === true)
+    check('Assigned Puzzle 5 override wins over a legacy four-digit override', correctOverride.body.team.attemptLog.at(-1).code === '36271485' && correctOverride.body.team.attemptLog.at(-1).correct === true)
     check('Correct 8-digit override transitions team to ESCAPED', correctOverride.body.status === 'ESCAPED')
     check('Escaped team result freezes official ranking time', typeof correctOverride.body.team.officialRankingSeconds === 'number')
   }

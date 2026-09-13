@@ -30,6 +30,11 @@ export function SuccessScreen({ team, playSound = true }: { team: Team; playSoun
     }
   }, [playSound])
 
+  // Constraint Breach has its own single permitted hint. The overall team
+  // hint count may include earlier module hints, so it is not appropriate for
+  // this final-stage summary.
+  const constraintHintsUsed = team.constraintBreachHintRevealed ? 1 : 0
+
   return (
     <div className="fade-up flex flex-col items-center text-center gap-6 py-10">
       <div
@@ -69,7 +74,7 @@ export function SuccessScreen({ team, playSound = true }: { team: Team; playSoun
               HINTS USED
             </div>
             <div className="font-mono text-xl" style={{ color: 'var(--text-hi)' }}>
-              {team.hintsUsed} / 3
+              {constraintHintsUsed} / 1
             </div>
           </div>
           <div>
