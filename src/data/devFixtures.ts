@@ -131,6 +131,7 @@ export function devFixtureTeam(overrides: Partial<Team> & Pick<Team, 'id' | 'nam
     registrationSource: 'COORDINATOR_MANUAL',
     finalCodeTransform: {},
     finalModuleEnabled: false,
+    constraintBreachVariantId: 'CB-01',
     maxTimeSeconds: 25 * 60,
     status: 'NOT_STARTED',
     totalPausedMs: 0,

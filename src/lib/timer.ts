@@ -44,3 +44,12 @@ export function formatDuration(seconds: number | null | undefined): string {
   if (seconds === null) return '—'
   return formatClock(seconds * 1000)
 }
+
+export function formatDurationHms(seconds: number | null | undefined): string {
+  if (seconds === undefined || seconds === null) return '00:00:00'
+  const totalSecs = Math.max(0, Math.round(seconds))
+  const hours = Math.floor(totalSecs / 3600)
+  const minutes = Math.floor((totalSecs % 3600) / 60)
+  const secs = totalSecs % 60
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}

@@ -486,10 +486,8 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (!team.recoveryCodeUnlocked) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final module is not unlocked yet — enter the correct recovery code first.' } }
         }
-        if (!team.constraintBreachVariantId) {
-          return { statusCode: 400, headers: jsonHeaders, body: { error: 'No Constraint Breach variant assigned to this team yet.' } }
-        }
-        const variant = getConstraintVariantById(team.constraintBreachVariantId)
+        const variantId = team.constraintBreachVariantId || 'CB-01'
+        const variant = getConstraintVariantById(variantId)
         if (!variant) return { statusCode: 404, headers: jsonHeaders, body: { error: 'Assigned variant not found.' } }
         return {
           statusCode: 200,
@@ -504,14 +502,16 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (!team.finalModuleEnabled || !team.recoveryCodeUnlocked) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final module is not accessible yet.' } }
         }
+        if (team.constraintBreachHintRevealed || team.hintsUsed >= 1) {
+          return { statusCode: 400, headers: jsonHeaders, body: { error: 'Constraint Breach hint has already been used.' } }
+        }
         const outcome = await withTeamMutation(
           db,
           teamId,
           now,
           (t) => {
-            const nextLevel = ((t.hintsUsed + 1) as HintLevel)
-            if (nextLevel > 3) return null
-            return engine.giveHint(t, now, nextLevel)
+            if (t.constraintBreachHintRevealed || t.hintsUsed >= 1) return null
+            return engine.giveHint(t, now, 1 as HintLevel)
           },
           'Hint cannot be used in current state'
         )
@@ -532,6 +532,8 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
       if (subpath === 'constraint-breach/complete' && method === 'POST') {
         const team = await db.getTeamById(teamId)
         if (!team) return { statusCode: 404, headers: jsonHeaders, body: { error: 'Team not found' } }
+        const authError = requireCoordinator()
+        if (authError) return authError
         if (!team.finalModuleEnabled) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final module has not been enabled by the coordinator yet.' } }
         }
@@ -548,7 +550,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (outcome.statusCode !== 200 || !outcome.team) {
           return { statusCode: outcome.statusCode, headers: jsonHeaders, body: outcome.body }
         }
-        await logAudit(db, 'CONSTRAINT_BREACH_COMPLETED', { teamId, actor: 'participant', now, metadata: { correct: true, mode: 'physical' } })
+        await logAudit(db, 'CONSTRAINT_BREACH_COMPLETED', { teamId, actor: 'coordinator', now, metadata: { correct: true, mode: 'physical' } })
         return { statusCode: 200, headers: jsonHeaders, body: { correct: true, team: toParticipantTeamView(outcome.team) } }
       }
 
@@ -606,9 +608,18 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         const outcome = await withTeamMutation(
           db, teamId, now,
           (team) => {
-            const variant = team.constraintBreachVariantId ? getConstraintVariantById(team.constraintBreachVariantId) : null
-            const effectiveOverride = team.finalCodeOverride || variant?.overrideCode
-            const effectiveTeam = effectiveOverride ? { ...team, finalCodeOverride: effectiveOverride } : team
+            const variantId = team.constraintBreachVariantId
+            if (!variantId) {
+              correct = false
+              return null
+            }
+            const variant = getConstraintVariantById(variantId)
+            // `finalCodeOverride` predates the physical Constraint Breach
+            // flow and is also used by the four-digit recovery-code tooling.
+            // It must not shadow the assigned variant's eight-digit override.
+            // Keep the answer server-side by passing it only to the engine's
+            // in-memory validation input; it is never serialized to the client.
+            const effectiveTeam = variant ? { ...team, finalCodeOverride: variant.overrideCode } : team
             const result = engine.submitCode(effectiveTeam, code, puzzleVersions, now)
             correct = result.correct
             return result.patch
@@ -647,6 +658,18 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         // `expectedVersion` is metadata for the CAS check, not a Team field.
         const expectedVersion = typeof body.expectedVersion === 'number' ? (body.expectedVersion as number) : undefined
         delete body.expectedVersion
+
+        // Physical Constraint Breach completion is a gated game transition,
+        // not a freely editable team property. Route it through the dedicated
+        // coordinator confirmation endpoint so the engine and audit trail are
+        // always involved.
+        if ('finalPuzzleCompleted' in body) {
+          return {
+            statusCode: 400,
+            headers: jsonHeaders,
+            body: { error: 'Confirm the physical Constraint Breach through its dedicated coordinator control.' },
+          }
+        }
 
         if (body.puzzleAssignments !== undefined) {
           const assignments = body.puzzleAssignments as Team['puzzleAssignments']
