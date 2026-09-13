@@ -39,50 +39,67 @@ export function SuccessScreen({ team, playSound = true }: { team: Team; playSoun
         ✓
       </div>
       <div>
+        <div className="font-mono text-xs sm:text-sm tracking-[0.4em] mb-1" style={{ color: 'var(--text-dim)' }}>
+          NEUROVAULT
+        </div>
         <div className="font-display text-3xl sm:text-4xl font-bold tracking-widest" style={{ color: 'var(--green)' }}>
           ACCESS GRANTED
         </div>
-        <div className="font-mono text-sm sm:text-base mt-2 tracking-[0.3em]" style={{ color: 'var(--text-mid)' }}>
-          SYSTEM RESTORED — ESCAPE SUCCESSFUL
+        <div className="font-display text-xl sm:text-2xl font-semibold tracking-wider mt-1" style={{ color: 'var(--text-hi)' }}>
+          SUCCESSFUL ESCAPE
+        </div>
+        <div className="font-mono text-sm sm:text-base mt-2 tracking-[0.3em]" style={{ color: 'var(--cyan)' }}>
+          SYSTEM RESTORED
         </div>
       </div>
 
-      <div className="w-full max-w-sm rounded-md p-6 mt-2" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
-        <div className="font-display text-lg font-semibold tracking-wide mb-4">{team.name}</div>
-        <div className="grid grid-cols-2 gap-3 text-left">
+      <div className="w-full max-w-md rounded-md p-6 mt-2" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
+        <div className="font-display text-lg font-semibold tracking-wide mb-4 text-center">{team.name}</div>
+        <div className="grid grid-cols-2 gap-4 text-left">
           <div>
-            <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-              Completion Time
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+              COMPLETION TIME
             </div>
             <div className="font-mono text-xl" style={{ color: 'var(--text-hi)' }}>
               {formatDuration(team.completionSeconds)}
             </div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-              Hints Used
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+              HINTS USED
             </div>
             <div className="font-mono text-xl" style={{ color: 'var(--text-hi)' }}>
               {team.hintsUsed} / 3
             </div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-              Hint Penalty
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+              PENALTY
             </div>
             <div className="font-mono text-xl" style={{ color: 'var(--amber)' }}>
-              {team.hintPenaltySeconds !== undefined ? `+${formatDuration(team.hintPenaltySeconds)}` : '—'}
+              {team.hintPenaltySeconds !== undefined ? `+${formatDuration(team.hintPenaltySeconds)}` : '+00:00'}
             </div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
-              Official Ranking Time
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+              OFFICIAL STATUS
             </div>
-            <div className="font-mono text-xl" style={{ color: 'var(--cyan)' }}>
-              {formatDuration(team.officialRankingSeconds)}
+            <div className="font-mono text-xl font-bold" style={{ color: 'var(--green)' }}>
+              ESCAPED
             </div>
           </div>
         </div>
+
+        {team.officialRankingSeconds !== undefined && (
+          <div className="mt-4 pt-4 border-t text-center" style={{ borderColor: 'var(--line)' }}>
+            <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>
+              OFFICIAL RANKING TIME
+            </div>
+            <div className="font-mono text-2xl font-bold mt-0.5" style={{ color: 'var(--cyan)' }}>
+              {formatDuration(team.officialRankingSeconds)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

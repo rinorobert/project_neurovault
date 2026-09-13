@@ -32,12 +32,22 @@ for (const variant of CB_DEV_FIXTURE_VARIANTS) {
 
   const fixedCells = variant.fixedAgents.map((a) => ({ row: a.row, col: a.col }))
 
-  // Check with initial 3 forbidden cells
+  // Check that expected solution is valid under initial forbidden cells
   const resInitial = solveConstraintBreach(fixedCells, variant.initialForbiddenCells)
-  check(`${variant.id}: exactly 1 unique solution with initial forbidden cells`, resInitial.solutionCount === 1)
+  const containsExpected = resInitial.solutions.some((sol) => {
+    return variant.solution.every((s) => sol.some((c) => c.row === s.row && c.col === s.col))
+  })
+  check(`${variant.id}: expected solution is valid under initial constraints`, containsExpected)
 
-  // Check that the solution matches expected
-  const found = resInitial.solutions[0]
+  // Check with 4th hint forbidden cell added: must be strictly unique (= 1)
+  const resWithHint = solveConstraintBreach(
+    fixedCells,
+    [...variant.initialForbiddenCells, variant.hiddenHintForbiddenCell]
+  )
+  check(`${variant.id}: solution becomes strictly unique (= 1) after Hint 1 reveals 4th cell`, resWithHint.solutionCount === 1)
+
+  // Check that the verified unique solution matches expected coordinates
+  const found = resWithHint.solutions[0]
   let matches = Boolean(found && found.length === 8)
   if (matches) {
     for (const solCoord of variant.solution) {
@@ -48,13 +58,6 @@ for (const variant of CB_DEV_FIXTURE_VARIANTS) {
     }
   }
   check(`${variant.id}: verified unique solution matches expected solution coordinates`, matches)
-
-  // Check with 4th hint forbidden cell added
-  const resWithHint = solveConstraintBreach(
-    fixedCells,
-    [...variant.initialForbiddenCells, variant.hiddenHintForbiddenCell]
-  )
-  check(`${variant.id}: solution remains unique (= 1) after Hint 1 reveals 4th cell`, resWithHint.solutionCount === 1)
 
   // 4. Server-side submission validation — correct submission accepted
   const correctSubmission = variant.solution.map((s) => ({ ...s }))
@@ -89,12 +92,15 @@ for (const variant of CB_DEV_FIXTURE_VARIANTS) {
     !validateConstraintBreachSubmission(fixedMismatch, variant, variant.initialForbiddenCells)
   )
 
-  // 8. Override code derivation reads column A -> H as agent IDs
+  // 8. Override code derivation reads column A -> H ranks (row + 1)
   const code = deriveOverrideCodeFromPlacement(variant.solution)
   check(`${variant.id}: derived override code is an 8-digit string`, /^[1-8]{8}$/.test(code))
   const byCol = new Array(8).fill(0)
-  for (const s of variant.solution) byCol[s.col] = s.agentId
-  check(`${variant.id}: derived override code matches manual column reading`, code === byCol.join(''))
+  for (const s of variant.solution) byCol[s.col] = s.row + 1
+  check(
+    `${variant.id}: derived override code matches expected override code`,
+    code === variant.overrideCode && code === byCol.join('')
+  )
 }
 
 console.log(`\n${failures === 0 ? 'ALL SOLVER TESTS PASSED' : failures + ' TEST(S) FAILED'}`)

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../state/store.js'
 
 export default function Home() {
-  const [introVisible, setIntroVisible] = useState(true)
+  const [introVisible, setIntroVisible] = useState(() => {
+    return sessionStorage.getItem("neurovault_intro_played") !== "true"
+  })
   // Settings are synchronized from /api/state; this is deliberately not a
   // locally persisted preference. The server remains authoritative if a
   // participant tries to navigate to the route directly.
@@ -20,6 +22,7 @@ export default function Home() {
           playsInline
           preload="metadata"
           aria-label="Project NeuroVault introduction"
+          onPlay={() => sessionStorage.setItem("neurovault_intro_played", "true")}
           onEnded={() => setIntroVisible(false)}
           onError={() => setIntroVisible(false)}
         />

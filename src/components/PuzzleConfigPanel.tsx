@@ -5,17 +5,45 @@ import { computeFinalCode } from '../lib/finalCode.js'
 import { useStore } from '../state/store.js'
 import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
 
+const CB_VARIANTS_CONFIG = [
+  {
+    id: 'CB-01',
+    name: 'CB-01 — THE BREACH',
+    fixed: 'Agent 2 → H2, Agent 5 → A5, Agent 6 → G6',
+    forbidden: 'H1, C5, F3 (Hint 1: D1)',
+    overrideCode: '53847162',
+  },
+  {
+    id: 'CB-02',
+    name: 'CB-02 — THE FRACTURE',
+    fixed: 'Agent 2 → B6, Agent 5 → E1, Agent 6 → F4',
+    forbidden: 'H8, C7, G5 (Hint 1: D3)',
+    overrideCode: '36271485',
+  },
+  {
+    id: 'CB-03',
+    name: 'CB-03 — THE COLLAPSE',
+    fixed: 'Agent 2 → B8, Agent 5 → E1, Agent 6 → F7',
+    forbidden: 'D6, C4, A3 (Hint 1: G5)',
+    overrideCode: '48531726',
+  },
+]
+
 export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzleVersions: PuzzleVersion[] }) {
-  const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride } = useStore()
+  const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride, assignConstraintVariant } = useStore()
   const [editingCode, setEditingCode] = useState(false)
   const [codeDraft, setCodeDraft] = useState('')
 
   const expectedCode = computeFinalCode(team, puzzleVersions)
   const initialDone = areInitialPuzzlesCompleted(team)
 
+  const activeCbVariant = CB_VARIANTS_CONFIG.find(
+    (v) => v.id.toUpperCase() === (team.constraintBreachVariantId?.toUpperCase() ?? 'CB-01')
+  ) ?? CB_VARIANTS_CONFIG[0]
+
   return (
     <div className="rounded-md p-5 flex flex-col gap-4" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="font-mono text-xs tracking-[0.25em]" style={{ color: 'var(--text-dim)' }}>
           PUZZLE CONFIGURATION (5 SLOTS)
         </div>
@@ -31,26 +59,94 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
           const assignment = team.puzzleAssignments.find((a) => a.slot === slot)
           const currentVersion = versions.find((v) => v.id === assignment?.puzzleVersionId)
 
-          // For the 4 initial slots, the checkbox both toggles AND reflects
-          // completion. The final slot is different on purpose: completion
-          // (`finalPuzzleCompleted`) can ONLY ever be set by a real
-          // server-validated Constraint Breach submission — a coordinator
-          // checkbox must never be able to fake that. What the coordinator
-          // CAN toggle here is `finalModuleEnabled`, a readiness gate that,
-          // combined with the team's own recovery-code unlock, is what
-          // actually opens the participant-facing Constraint Breach
-          // interface. This persists through the same PATCH /api/teams/:id
-          // route used for every other team edit — no new mechanism.
-          const isDone = isFinal ? team.finalPuzzleCompleted : team.puzzleCompleted[slot as InitialPuzzleSlotKey]
-          const checkboxChecked = isFinal ? team.finalModuleEnabled === true : isDone
+          if (isFinal) {
+            const isDone = team.finalPuzzleCompleted
+            const isEnabled = team.finalModuleEnabled === true
 
-          function handleCheckboxChange(checked: boolean) {
-            if (isFinal) {
-              updateTeam(team.id, { finalModuleEnabled: checked })
-            } else {
-              markPuzzleCompleted(team.id, slot, checked, currentVersion?.outputFragment)
-            }
+            return (
+              <div
+                key={slot}
+                className="flex flex-col gap-3 p-3 rounded-sm"
+                style={{
+                  background: 'var(--bg-raised)',
+                  border: `1px solid ${isDone ? 'var(--green)' : isEnabled ? 'var(--cyan)' : 'var(--line)'}`,
+                }}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs font-semibold" style={{ color: isDone ? 'var(--green)' : 'var(--text-hi)' }}>
+                      PUZZLE 5: CONSTRAINT BREACH (PHYSICAL 8x8 GRID)
+                    </span>
+                    <span
+                      className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-sm"
+                      style={{
+                        border: `1px solid ${isDone ? 'var(--green)' : isEnabled ? 'var(--cyan)' : 'var(--text-dim)'}`,
+                        color: isDone ? 'var(--green)' : isEnabled ? 'var(--cyan)' : 'var(--text-dim)',
+                      }}
+                    >
+                      {isDone ? 'Physical Grid Solved' : isEnabled ? 'Final Module Enabled' : 'Locked'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer font-mono text-xs" style={{ color: 'var(--text-hi)' }}>
+                      <input
+                        type="checkbox"
+                        checked={isEnabled}
+                        onChange={(e) => updateTeam(team.id, { finalModuleEnabled: e.target.checked })}
+                        className="w-4 h-4 accent-[var(--cyan)]"
+                      />
+                      <span>Enable Final Module</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer font-mono text-xs" style={{ color: 'var(--text-hi)' }}>
+                      <input
+                        type="checkbox"
+                        checked={isDone}
+                        onChange={(e) => updateTeam(team.id, { finalPuzzleCompleted: e.target.checked })}
+                        className="w-4 h-4 accent-[var(--green)]"
+                      />
+                      <span>Physical Grid Solved</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Variant Selector */}
+                <div className="flex items-center gap-3 flex-wrap pt-2 border-t" style={{ borderColor: 'var(--line)' }}>
+                  <span className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
+                    Assigned Variant:
+                  </span>
+                  <select
+                    value={team.constraintBreachVariantId ?? 'CB-01'}
+                    onChange={(e) => assignConstraintVariant(team.id, e.target.value)}
+                    className="font-mono text-xs rounded-sm px-2.5 py-1.5 outline-none font-semibold"
+                    style={{ background: 'var(--bg-void)', border: '1px solid var(--cyan)', color: 'var(--cyan)' }}
+                  >
+                    {CB_VARIANTS_CONFIG.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} (Override: {v.overrideCode})
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                    Fixed: <strong style={{ color: 'var(--text-hi)' }}>{activeCbVariant.fixed}</strong>
+                  </span>
+                  <span className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                    Forbidden: <strong style={{ color: 'var(--text-hi)' }}>{activeCbVariant.forbidden}</strong>
+                  </span>
+                </div>
+
+                {!team.recoveryCodeUnlocked && (
+                  <div className="font-mono text-[10px]" style={{ color: 'var(--amber)' }}>
+                    ⚠️ Note: Final module participant interface also requires the 4-digit Recovery Code to be unlocked.
+                  </div>
+                )}
+              </div>
+            )
           }
+
+          const isDone = team.puzzleCompleted[slot as InitialPuzzleSlotKey]
 
           return (
             <div
@@ -58,23 +154,21 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
               className="flex flex-col gap-1 p-2.5 rounded-sm"
               style={{
                 background: 'var(--bg-raised)',
-                border: `1px solid ${isFinal ? (isDone ? 'var(--green)' : checkboxChecked ? 'var(--cyan)' : 'var(--line)') : isDone ? 'rgba(53,226,140,0.3)' : 'var(--line)'}`,
+                border: `1px solid ${isDone ? 'rgba(53,226,140,0.3)' : 'var(--line)'}`,
               }}
             >
               <div className="flex items-center gap-3 flex-wrap">
                 <input
                   type="checkbox"
-                  checked={checkboxChecked}
-                  onChange={(e) => handleCheckboxChange(e.target.checked)}
+                  checked={isDone}
+                  onChange={(e) => markPuzzleCompleted(team.id, slot, e.target.checked, currentVersion?.outputFragment)}
                   className="w-4 h-4 accent-[var(--cyan)] cursor-pointer"
-                  title={isFinal ? 'Enable the final module (does not by itself complete or escape the team)' : ''}
                 />
                 <span
                   className="font-mono text-xs w-60 shrink-0 font-medium"
                   style={{ color: isDone ? 'var(--green)' : 'var(--text-hi)' }}
                 >
                   {PUZZLE_SLOT_LABELS[slot]}
-                  {isFinal && ' (Collaborative Gated)'}
                 </span>
                 <select
                   value={assignment?.puzzleVersionId ?? ''}
@@ -93,20 +187,12 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                     → {currentVersion.outputDigit}
                   </span>
                 )}
-                {isFinal && (
+                {isDone && (
                   <span
                     className="font-mono text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm"
-                    style={{
-                      border: `1px solid ${isDone ? 'var(--green)' : checkboxChecked ? 'var(--cyan)' : 'var(--text-dim)'}`,
-                      color: isDone ? 'var(--green)' : checkboxChecked ? 'var(--cyan)' : 'var(--text-dim)',
-                    }}
+                    style={{ border: '1px solid var(--green)', color: 'var(--green)' }}
                   >
-                    {isDone ? 'Resolved' : checkboxChecked ? 'Enabled' : 'Disabled'}
-                  </span>
-                )}
-                {isFinal && !team.recoveryCodeUnlocked && (
-                  <span className="font-mono text-[10px]" style={{ color: 'var(--amber)' }}>
-                    [Also requires team's recovery code to be unlocked]
+                    Resolved
                   </span>
                 )}
               </div>
@@ -123,7 +209,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
       <div className="pt-3 mt-1 border-t flex flex-wrap items-center gap-4" style={{ borderColor: 'var(--line)' }}>
         <div>
           <div className="font-mono text-xs tracking-[0.25em] mb-1" style={{ color: 'var(--text-dim)' }}>
-            EXPECTED CODE (COORDINATOR REFERENCE — RECOVERY CODE UNTIL A FINAL-MODULE OVERRIDE IS SET)
+            EXPECTED FINAL OVERRIDE / RECOVERY CODE (COORDINATOR REFERENCE)
           </div>
           {editingCode ? (
             <div className="flex items-center gap-2">
@@ -155,7 +241,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
           ) : (
             <div className="flex items-center gap-3">
               <span className="digit-box text-3xl font-bold tracking-widest" style={{ color: 'var(--cyan)' }}>
-                {expectedCode}
+                {team.finalCodeOverride || activeCbVariant.overrideCode || expectedCode}
               </span>
               {team.finalCodeOverride && (
                 <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--amber)' }}>
@@ -164,7 +250,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
               )}
               <button
                 onClick={() => {
-                  setCodeDraft(expectedCode)
+                  setCodeDraft(team.finalCodeOverride || activeCbVariant.overrideCode || expectedCode)
                   setEditingCode(true)
                 }}
                 className="font-mono text-[11px] uppercase tracking-wider px-2 py-1 rounded-sm"
@@ -178,7 +264,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                   className="font-mono text-[11px] uppercase tracking-wider px-2 py-1 rounded-sm"
                   style={{ border: '1px solid var(--line)', color: 'var(--text-dim)' }}
                 >
-                  Revert to Computed
+                  Revert to Variant
                 </button>
               )}
             </div>

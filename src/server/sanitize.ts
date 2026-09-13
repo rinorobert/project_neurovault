@@ -86,6 +86,7 @@ export function toParticipantConstraintView(
     : variant.initialForbiddenCells
   return {
     id: variant.id,
+    name: variant.name,
     difficulty: variant.difficulty,
     fixedAgents: variant.fixedAgents,
     forbiddenCells,

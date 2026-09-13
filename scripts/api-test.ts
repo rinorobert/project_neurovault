@@ -4,7 +4,7 @@ delete process.env.DATABASE_URL // force the in-memory repository for this test 
 
 import { handleApiRoute, type ApiRequest } from '../src/server/apiRouter.js'
 import { getDatabase, __resetDatabaseForTests } from '../src/server/db/client.js'
-import { CB_DEV_FIXTURE_VARIANTS } from '../src/server/puzzleData/constraintVariants.js'
+import { CB_DEV_FIXTURE_VARIANTS, CB_PRODUCTION_VARIANTS, CB_01, CB_02, CB_03 } from '../src/server/puzzleData/constraintVariants.js'
 import { DEV_FIXTURE_PUZZLE_VERSIONS } from '../src/data/devFixtures.js'
 import { deriveOverrideCodeFromPlacement } from '../src/lib/constraintBreachSolver.js'
 
@@ -812,6 +812,103 @@ async function run() {
 
     const finalState = await db.getTeamById(created.id)
     check('The team keeps the FIRST transition (RUNNING), not the stale second one', finalState?.status === 'RUNNING')
+  }
+
+  // ==========================================================================
+  section('15. Constraint Breach Physical Puzzle Variants & Override Verification')
+  // ==========================================================================
+  {
+    check('All 3 production variants exist (CB-01, CB-02, CB-03)', CB_PRODUCTION_VARIANTS.length === 3)
+    check('CB-01 override code is 53847162', CB_01.overrideCode === '53847162')
+    check('CB-02 override code is 36271485', CB_02.overrideCode === '36271485')
+    check('CB-03 override code is 48531726', CB_03.overrideCode === '48531726')
+
+    // Create a new team via coordinator
+    const regRes = await call('POST', '/api/teams', {
+      cookie: coordinatorCookie,
+      body: {
+        name: 'Variant Test Team',
+        captain: 'Lead',
+        members: ['Lead', 'M2', 'M3', 'M4'],
+        contactEmail: 'variant@neurovault.test',
+        contactMobile: '+919999900001',
+      },
+    })
+    const tId = regRes.body.team.id
+    await call('POST', `/api/teams/${tId}/approve`, { cookie: coordinatorCookie })
+    await call('POST', `/api/teams/${tId}/activate`, { cookie: coordinatorCookie })
+
+    // Unauthenticated participant cannot change variant
+    const badPatch = await call('PATCH', `/api/teams/${tId}`, {
+      body: { constraintBreachVariantId: 'CB-02' },
+    })
+    check('Participant cannot change Puzzle 5 variant without coordinator auth (401)', badPatch.statusCode === 401)
+
+    // Coordinator assigns CB-02
+    const goodPatch = await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { constraintBreachVariantId: 'CB-02' },
+    })
+    check('Coordinator can assign CB-02 variant to team', goodPatch.statusCode === 200 && goodPatch.body.team.constraintBreachVariantId === 'CB-02')
+
+    // Start team and unlock initial stations
+    await call('POST', `/api/teams/${tId}/game/start`, { cookie: coordinatorCookie })
+    for (const slot of ['SLOT_1', 'SLOT_2', 'SLOT_3', 'SLOT_4']) {
+      await call('POST', `/api/teams/${tId}/puzzles/${slot}/complete`, {
+        cookie: coordinatorCookie,
+        body: { completed: true },
+      })
+    }
+
+    // Solve recovery code
+    const teamDb = await getDatabase().getTeamById(tId)
+    const puzzleVersions = await getDatabase().getPuzzleVersions()
+    const digitsBySlot: Record<string, number> = {}
+    for (const a of teamDb!.puzzleAssignments) {
+      const pv = puzzleVersions.find((p) => p.id === a.puzzleVersionId)
+      if (pv?.outputDigit !== undefined) digitsBySlot[a.slot] = pv.outputDigit
+    }
+    const trueRecCode = ['SLOT_1', 'SLOT_2', 'SLOT_3', 'SLOT_4'].map((s) => digitsBySlot[s] ?? 0).join('')
+
+    const recSubmit = await call('POST', `/api/teams/${tId}/recovery-code/verify`, {
+      body: { code: trueRecCode },
+    })
+    check('Recovery code succeeds and unlocks final stage', recSubmit.body.correct === true && recSubmit.body.team.recoveryCodeUnlocked === true)
+
+    // Enable final module
+    const enableRes = await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { finalModuleEnabled: true },
+    })
+    check('Coordinator enables final module for team', enableRes.body.team.finalModuleEnabled === true)
+
+    // Participant requests Hint 1 for Constraint Breach
+    const hintRes = await call('POST', `/api/teams/${tId}/constraint-breach/hint`)
+    check('Participant can request Constraint Breach Hint 1 (+30s penalty)', hintRes.statusCode === 200 && hintRes.body.success === true)
+
+    // Participant view shows 4 forbidden cells after Hint 1
+    const viewAfterHint = await call('GET', `/api/teams/${tId}/constraint-breach`)
+    check('Constraint Breach view after Hint 1 includes 4 forbidden cells', viewAfterHint.body.variant.forbiddenCells.length === 4)
+
+    // Physical puzzle solved confirmation
+    const completeRes = await call('POST', `/api/teams/${tId}/constraint-breach/complete`)
+    check('Confirming physical grid restoration sets finalPuzzleCompleted', completeRes.body.team.finalPuzzleCompleted === true)
+    check('Constraint Breach completion does NOT escape the team', completeRes.body.team.status === 'RUNNING')
+
+    // Final override validation: wrong 8-digit code
+    const wrongOverride = await call('POST', `/api/teams/${tId}/final-code/verify`, {
+      body: { code: '99999999' },
+    })
+    check('Wrong complete 8-digit code is rejected and records attempt', wrongOverride.body.correct === false && wrongOverride.body.team.attempts === 1)
+    check('Team status remains RUNNING after wrong 8-digit code', wrongOverride.body.status === 'RUNNING')
+
+    // Final override validation: correct 8-digit code for CB-02 ('36271485')
+    const correctOverride = await call('POST', `/api/teams/${tId}/final-code/verify`, {
+      body: { code: '36271485' },
+    })
+    check('Correct 8-digit override for CB-02 is accepted', correctOverride.body.correct === true)
+    check('Correct 8-digit override transitions team to ESCAPED', correctOverride.body.status === 'ESCAPED')
+    check('Escaped team result freezes official ranking time', typeof correctOverride.body.team.officialRankingSeconds === 'number')
   }
 
   console.log(`\n${failures === 0 ? 'ALL API INTEGRATION TESTS PASSED' : failures + ' TEST(S) FAILED'}`)
