@@ -134,6 +134,33 @@ export function ControlsPanel({ team }: { team: Team }) {
         />
       </div>
 
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t font-mono text-[11px]" style={{ borderColor: 'var(--line)' }}>
+        <div className="p-2 rounded-xs" style={{ background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
+          <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Recovery Code</div>
+          <div className="font-semibold mt-0.5" style={{ color: team.recoveryCodeUnlocked ? 'var(--green)' : 'var(--amber)' }}>
+            {team.recoveryCodeUnlocked ? 'UNLOCKED ✓' : 'LOCKED'}
+          </div>
+        </div>
+        <div className="p-2 rounded-xs" style={{ background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
+          <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Final Module</div>
+          <div className="font-semibold mt-0.5" style={{ color: team.finalModuleEnabled ? 'var(--cyan)' : 'var(--text-dim)' }}>
+            {team.finalModuleEnabled ? 'ENABLED' : 'DISABLED'}
+          </div>
+        </div>
+        <div className="p-2 rounded-xs" style={{ background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
+          <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Constraint Breach</div>
+          <div className="font-semibold mt-0.5" style={{ color: team.finalPuzzleCompleted ? 'var(--green)' : 'var(--text-dim)' }}>
+            {team.finalPuzzleCompleted ? 'SOLVED ✓' : 'IN PROGRESS'}
+          </div>
+        </div>
+        <div className="p-2 rounded-xs" style={{ background: 'var(--bg-void)', border: '1px solid var(--line)' }}>
+          <div className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-dim)' }}>Final Override</div>
+          <div className="font-semibold mt-0.5" style={{ color: team.status === 'ESCAPED' ? 'var(--green)' : 'var(--text-dim)' }}>
+            {team.status === 'ESCAPED' ? 'ESCAPED ✓' : 'PENDING'}
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 pt-3 border-t" style={{ borderColor: 'var(--line)' }}>
         <div>
           <div className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'var(--text-dim)' }}>

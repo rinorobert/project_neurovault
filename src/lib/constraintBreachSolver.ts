@@ -195,29 +195,29 @@ export function validateConstraintBreachSubmission(
     if (!match || match.row !== fixed.row || match.col !== fixed.col) return false
   }
 
-  // Finally, the submission must match the unique known solution exactly.
-  const submittedKey = [...submission]
-    .sort((a, b) => a.agentId - b.agentId)
-    .map((s) => `${s.agentId}:${s.row}:${s.col}`)
+  // Finally, the submission must match the unique known solution coordinates.
+  const submittedCoords = [...submission]
+    .sort((a, b) => a.col - b.col)
+    .map((s) => `${s.row}:${s.col}`)
     .join('|')
-  const solutionKey = [...variant.solution]
-    .sort((a, b) => a.agentId - b.agentId)
-    .map((s) => `${s.agentId}:${s.row}:${s.col}`)
+  const solutionCoords = [...variant.solution]
+    .sort((a, b) => a.col - b.col)
+    .map((s) => `${s.row}:${s.col}`)
     .join('|')
 
-  return submittedKey === solutionKey
+  return submittedCoords === solutionCoords
 }
 
 /**
- * FINAL OVERRIDE CODE — read agent IDs left to right, Column A (0) through
- * Column H (7), from a validated placement.
+ * FINAL OVERRIDE CODE — reads rank (row + 1) left to right from Column A (0)
+ * through Column H (7) from the validated placement.
  */
 export function deriveOverrideCodeFromPlacement(
-  placement: Array<{ agentId: number; row: number; col: number }>
+  placement: Array<{ agentId?: number; row: number; col: number }>
 ): string {
   const byColumn = new Array(8).fill(0)
-  for (const { agentId, col } of placement) {
-    if (col >= 0 && col < 8) byColumn[col] = agentId
+  for (const { row, col } of placement) {
+    if (col >= 0 && col < 8) byColumn[col] = row + 1
   }
   return byColumn.join('')
 }

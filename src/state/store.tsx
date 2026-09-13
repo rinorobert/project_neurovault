@@ -6,6 +6,7 @@ import type {
   PuzzleSlotKey,
   InitialPuzzleSlotKey,
   HintLevel,
+  ParticipantConstraintView,
 } from '../types.js'
 
 // ============================================================================
@@ -77,6 +78,10 @@ interface StoreContextValue extends StoreState {
   ) => Promise<void>
   setPuzzleVersion: (teamId: string, slot: PuzzleSlotKey, puzzleVersionId: string) => Promise<void>
   changeFinalCodeOverride: (teamId: string, code: string | undefined) => Promise<void>
+  assignConstraintVariant: (teamId: string, variantId: string) => Promise<void>
+  useConstraintBreachHint: (teamId: string) => Promise<{ success: boolean }>
+  completeConstraintBreachAction: (teamId: string) => Promise<{ correct: boolean }>
+  fetchConstraintBreach: (teamId: string) => Promise<ParticipantConstraintView | null>
 
   // Delete Completed Result (server-generated random token)
   requestDeleteResultToken: (
@@ -254,6 +259,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     changeFinalCodeOverride: async (teamId, code) => {
       await mutateTeam(teamId, '', { method: 'PATCH', body: JSON.stringify({ finalCodeOverride: code ?? null }) })
+    },
+
+    assignConstraintVariant: async (teamId, variantId) => {
+      await mutateTeam(teamId, '', { method: 'PATCH', body: JSON.stringify({ constraintBreachVariantId: variantId }) })
+    },
+
+    useConstraintBreachHint: async (teamId) => {
+      const result = await apiFetch(`/api/teams/${teamId}/constraint-breach/hint`, { method: 'POST' })
+      if (result.ok && result.body?.team) applyTeam(result.body.team)
+      return { success: Boolean(result.ok) }
+    },
+
+    completeConstraintBreachAction: async (teamId) => {
+      const result = await apiFetch(`/api/teams/${teamId}/constraint-breach/complete`, { method: 'POST' })
+      if (result.ok && result.body?.team) applyTeam(result.body.team)
+      return { correct: Boolean(result.body?.correct) }
+    },
+
+    fetchConstraintBreach: async (teamId) => {
+      const result = await apiFetch(`/api/teams/${teamId}/constraint-breach`)
+      if (!result.ok) return null
+      return result.body?.variant ?? null
     },
 
     requestDeleteResultToken: async (id) => {

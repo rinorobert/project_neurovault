@@ -327,7 +327,10 @@ section('13. Constraint Breach N-Queens Solver & 3 Dev Fixture Variants')
 {
   for (const variant of CB_DEV_FIXTURE_VARIANTS) {
     const cells = variant.fixedAgents.map((a) => ({ row: a.row, col: a.col }))
-    const res = solveConstraintBreach(cells, variant.initialForbiddenCells)
+    const res = solveConstraintBreach(cells, [
+      ...variant.initialForbiddenCells,
+      variant.hiddenHintForbiddenCell,
+    ])
     check(`${variant.id}: solver confirms strictly 1 unique solution`, res.solutionCount === 1)
   }
 }

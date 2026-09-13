@@ -108,18 +108,21 @@ export interface CellCoord {
  */
 export interface ConstraintBreachVariant {
   id: string
+  name?: string
   difficulty: 'easy' | 'medium' | 'hard'
   fixedAgents: Array<{ agentId: number; row: number; col: number }> // Exactly 3 fixed agents
   initialForbiddenCells: CellCoord[] // Exactly 3 initial forbidden cells
   hiddenHintForbiddenCell: CellCoord // 1 hidden cell revealed only after Hint 1 is used
   solution: Array<{ agentId: number; row: number; col: number }> // 8 agent placements
   solutionCount: number // Must strictly equal 1
+  overrideCode: string // Authoritative 8-digit override sequence
   metadata?: string
 }
 
 /** Safe subset of ConstraintBreachVariant sent to participants. */
 export interface ParticipantConstraintView {
   id: string
+  name?: string
   difficulty: 'easy' | 'medium' | 'hard'
   fixedAgents: Array<{ agentId: number; row: number; col: number }>
   /** Initial 3 forbidden cells, plus the 4th once legitimately hinted. */

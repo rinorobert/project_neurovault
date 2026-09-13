@@ -5,8 +5,9 @@ import { CountdownTimer } from '../components/CountdownTimer.js'
 import { PuzzleProgress } from '../components/PuzzleProgress.js'
 import { CodeEntry } from '../components/CodeEntry.js'
 import { SuccessScreen } from '../components/SuccessScreen.js'
-import { AccessDenied, TimeExpiredScreen } from '../components/FailureScreen.js'
+import { TimeExpiredScreen } from '../components/FailureScreen.js'
 import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
+import { ConstraintBreachView } from '../components/ConstraintBreachView.js'
 
 function StandbyScreen() {
   return (
@@ -28,9 +29,7 @@ function StandbyScreen() {
 }
 
 export default function ParticipantView() {
-  const { activeTeam, settings, submitCode, verifyRecoveryCode } = useStore()
-  const [lastResult, setLastResult] = useState<{ correct: boolean; attemptsRemaining: number | null } | null>(null)
-  const [shake, setShake] = useState(false)
+  const { activeTeam, settings, verifyRecoveryCode } = useStore()
   const [recoveryShake, setRecoveryShake] = useState(false)
   const [recoveryWrong, setRecoveryWrong] = useState(false)
 
@@ -41,25 +40,12 @@ export default function ParticipantView() {
   const paused = team.status === 'PAUSED'
   const escaped = team.status === 'ESCAPED'
   const expired = team.status === 'TIME_EXPIRED'
-  const attemptsExhausted =
-    team.maxAttempts !== undefined && team.attempts >= team.maxAttempts && !escaped
 
   const initialDone = areInitialPuzzlesCompleted(team)
   const recoveryUnlocked = team.recoveryCodeUnlocked === true
   const canEnterRecoveryCode = initialDone && !recoveryUnlocked
-  // The override is a distinct post-Constraint-Breach step. Both flags are
-  // server-controlled; once Constraint Breach is completed, changing the
-  // coordinator's availability toggle must not hide the earned final input.
-  const canEnterFinalCode = recoveryUnlocked && team.finalPuzzleCompleted
-
-  async function handleSubmit(code: string) {
-    const result = await submitCode(team.id, code)
-    setLastResult(result)
-    if (!result.correct) {
-      setShake(true)
-      setTimeout(() => setShake(false), 500)
-    }
-  }
+  const canEnterConstraintBreach =
+    recoveryUnlocked && (team.finalModuleEnabled === true || team.finalPuzzleCompleted === true)
 
   async function handleRecoverySubmit(code: string) {
     const result = await verifyRecoveryCode(team.id, code)
@@ -176,38 +162,8 @@ export default function ParticipantView() {
                       </div>
                     )}
                   </>
-                ) : canEnterFinalCode ? (
-                  <>
-                    <div className="font-mono text-xs tracking-[0.3em] text-center" style={{ color: 'var(--cyan)' }}>
-                      FINAL OVERRIDE
-                    </div>
-                    <div className="font-mono text-[11px] text-center max-w-sm" style={{ color: 'var(--text-dim)' }}>
-                      Constraint Breach completed. Enter the 8-digit override sequence.
-                    </div>
-                    <CodeEntry
-                      length={8}
-                      onSubmit={handleSubmit}
-                      disabled={paused || attemptsExhausted}
-                      shake={shake}
-                      submitLabel="Submit Override"
-                    />
-                    {team.maxAttempts !== undefined && (
-                      <div className="font-mono text-xs" style={{ color: 'var(--text-dim)' }}>
-                        Attempts remaining: {Math.max(0, team.maxAttempts - team.attempts)}
-                      </div>
-                    )}
-                    {attemptsExhausted && (
-                      <div
-                        className="font-mono text-xs tracking-widest px-4 py-2 rounded-sm"
-                        style={{ color: 'var(--red)', border: '1px solid var(--red)' }}
-                      >
-                        OVERRIDE LOCKED — NO ATTEMPTS REMAINING. CONTACT YOUR COORDINATOR.
-                      </div>
-                    )}
-                    {!attemptsExhausted && lastResult && !lastResult.correct && (
-                      <AccessDenied attemptsRemaining={lastResult.attemptsRemaining} />
-                    )}
-                  </>
+                ) : canEnterConstraintBreach ? (
+                  <ConstraintBreachView team={team} disabled={paused} />
                 ) : (
                   <div
                     className="w-full text-center font-mono text-xs p-4 rounded-sm"
