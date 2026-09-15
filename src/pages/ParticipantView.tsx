@@ -140,7 +140,10 @@ export default function ParticipantView() {
             )}
 
             {!notStarted && (
-              <div className={`w-full ${canEnterConstraintBreach ? 'max-w-6xl' : 'max-w-md'} flex flex-col items-center gap-4 transition-all duration-300`}>
+              <div
+                className={`w-full ${canEnterConstraintBreach ? '' : 'max-w-md'} flex flex-col items-center gap-4 transition-all duration-300`}
+                style={canEnterConstraintBreach ? { width: 'min(95vw, calc(100vw - 5rem), 1600px)' } : undefined}
+              >
                 {canEnterRecoveryCode ? (
                   <>
                     <div className="font-mono text-xs sm:text-sm tracking-[0.3em] font-bold text-center" style={{ color: 'var(--cyan)' }}>

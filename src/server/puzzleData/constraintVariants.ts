@@ -1,4 +1,5 @@
 import type { ConstraintBreachVariant } from '../../types.js'
+import { deriveOverrideCodeFromPlacement, solveConstraintBreach } from '../../lib/constraintBreachSolver.js'
 
 // ============================================================================
 // PROJECT NEUROVAULT — Constraint Breach Variant Data (SERVER-ONLY)
@@ -25,6 +26,51 @@ export function coordToAlg(row: number, col: number): string {
   return `${String.fromCharCode(65 + col)}${row + 1}`
 }
 
+type ConstraintBreachVariantInput = Omit<
+  ConstraintBreachVariant,
+  'solution' | 'solutionCount' | 'overrideCode'
+> & {
+  /** Agent labels are physical-board labels; placement coordinates are solved below. */
+  agentIdsByColumn: number[]
+}
+
+/**
+ * Makes the physical board configuration authoritative. The unique solution
+ * and final override are derived from its fixed/forbidden constraints, so a
+ * code can never drift independently from the puzzle that produces it.
+ */
+function buildConstraintBreachVariant({ agentIdsByColumn, ...input }: ConstraintBreachVariantInput): ConstraintBreachVariant {
+  if (agentIdsByColumn.length !== 8 || new Set(agentIdsByColumn).size !== 8) {
+    throw new Error(`${input.id}: exactly eight unique physical agent IDs are required.`)
+  }
+  const solved = solveConstraintBreach(
+    input.fixedAgents.map(({ row, col }) => ({ row, col })),
+    [...input.initialForbiddenCells, input.hiddenHintForbiddenCell]
+  )
+  if (!solved.isValidUniqueVariant || !solved.solutions[0]) {
+    throw new Error(`${input.id}: physical constraints must produce exactly one solution after Hint 1.`)
+  }
+
+  const solution = solved.solutions[0].map(({ row, col }) => ({
+    agentId: agentIdsByColumn[col],
+    row,
+    col,
+  }))
+  for (const fixed of input.fixedAgents) {
+    const solvedCell = solution.find((cell) => cell.agentId === fixed.agentId)
+    if (!solvedCell || solvedCell.row !== fixed.row || solvedCell.col !== fixed.col) {
+      throw new Error(`${input.id}: fixed agent ${fixed.agentId} does not match the solved physical board.`)
+    }
+  }
+
+  return {
+    ...input,
+    solution,
+    solutionCount: solved.solutionCount,
+    overrideCode: deriveOverrideCodeFromPlacement(solution),
+  }
+}
+
 /**
  * PRODUCTION VARIANT 1: CB-01 — THE BREACH
  *
@@ -45,7 +91,7 @@ export function coordToAlg(row: number, col: number): string {
  * Final Override:
  *   53847162
  */
-export const CB_01: ConstraintBreachVariant = {
+export const CB_01: ConstraintBreachVariant = buildConstraintBreachVariant({
   id: 'CB-01',
   name: 'CB-01 — THE BREACH',
   difficulty: 'medium',
@@ -60,20 +106,9 @@ export const CB_01: ConstraintBreachVariant = {
     algToCoord('F3'),
   ],
   hiddenHintForbiddenCell: algToCoord('D1'),
-  solution: [
-    { agentId: 5, ...algToCoord('A5') },
-    { agentId: 3, ...algToCoord('B3') },
-    { agentId: 8, ...algToCoord('C8') },
-    { agentId: 4, ...algToCoord('D4') },
-    { agentId: 7, ...algToCoord('E7') },
-    { agentId: 1, ...algToCoord('F1') },
-    { agentId: 6, ...algToCoord('G6') },
-    { agentId: 2, ...algToCoord('H2') },
-  ],
-  solutionCount: 1,
-  overrideCode: '53847162',
+  agentIdsByColumn: [5, 3, 8, 4, 7, 1, 6, 2],
   metadata: 'CB-01 — THE BREACH (Production Variant 1)',
-}
+})
 
 /**
  * PRODUCTION VARIANT 2: CB-02 — THE FRACTURE
@@ -95,7 +130,7 @@ export const CB_01: ConstraintBreachVariant = {
  * Final Override:
  *   36271485
  */
-export const CB_02: ConstraintBreachVariant = {
+export const CB_02: ConstraintBreachVariant = buildConstraintBreachVariant({
   id: 'CB-02',
   name: 'CB-02 — THE FRACTURE',
   difficulty: 'medium',
@@ -110,20 +145,9 @@ export const CB_02: ConstraintBreachVariant = {
     algToCoord('G5'),
   ],
   hiddenHintForbiddenCell: algToCoord('D3'),
-  solution: [
-    { agentId: 3, ...algToCoord('A3') },
-    { agentId: 2, ...algToCoord('B6') },
-    { agentId: 1, ...algToCoord('C2') },
-    { agentId: 7, ...algToCoord('D7') },
-    { agentId: 5, ...algToCoord('E1') },
-    { agentId: 6, ...algToCoord('F4') },
-    { agentId: 8, ...algToCoord('G8') },
-    { agentId: 4, ...algToCoord('H5') },
-  ],
-  solutionCount: 1,
-  overrideCode: '36271485',
+  agentIdsByColumn: [3, 2, 1, 7, 5, 6, 8, 4],
   metadata: 'CB-02 — THE FRACTURE (Production Variant 2)',
-}
+})
 
 /**
  * PRODUCTION VARIANT 3: CB-03 — THE COLLAPSE
@@ -145,7 +169,7 @@ export const CB_02: ConstraintBreachVariant = {
  * Final Override:
  *   48531726
  */
-export const CB_03: ConstraintBreachVariant = {
+export const CB_03: ConstraintBreachVariant = buildConstraintBreachVariant({
   id: 'CB-03',
   name: 'CB-03 — THE COLLAPSE',
   difficulty: 'medium',
@@ -160,20 +184,9 @@ export const CB_03: ConstraintBreachVariant = {
     algToCoord('A3'),
   ],
   hiddenHintForbiddenCell: algToCoord('G5'),
-  solution: [
-    { agentId: 4, ...algToCoord('A4') },
-    { agentId: 2, ...algToCoord('B8') },
-    { agentId: 3, ...algToCoord('C5') },
-    { agentId: 1, ...algToCoord('D3') },
-    { agentId: 5, ...algToCoord('E1') },
-    { agentId: 6, ...algToCoord('F7') },
-    { agentId: 7, ...algToCoord('G2') },
-    { agentId: 8, ...algToCoord('H6') },
-  ],
-  solutionCount: 1,
-  overrideCode: '48531726',
+  agentIdsByColumn: [4, 2, 3, 1, 5, 6, 7, 8],
   metadata: 'CB-03 — THE COLLAPSE (Production Variant 3)',
-}
+})
 
 export const CB_PRODUCTION_VARIANTS: ConstraintBreachVariant[] = [
   CB_01,

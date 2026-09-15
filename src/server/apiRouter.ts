@@ -12,13 +12,14 @@ import {
 import * as engine from '../engine/gameEngine.js'
 import { buildLeaderboard } from '../lib/leaderboard.js'
 import { solveConstraintBreach, validateConstraintBreachSubmission, deriveOverrideCodeFromPlacement } from '../lib/constraintBreachSolver.js'
-import { getConstraintVariantById } from './puzzleData/constraintVariants.js'
+import { CB_PRODUCTION_VARIANTS, getConstraintVariantById } from './puzzleData/constraintVariants.js'
 import { newTeamDraft, defaultPuzzleAssignments } from '../data/teams.js'
 import { normalizeIndianMobile } from './validation.js'
 import {
   toParticipantTeamView,
   toParticipantPuzzleView,
   toParticipantConstraintView,
+  toCoordinatorConstraintVariantView,
   toPublicLeaderboardTeamView,
 } from './sanitize.js'
 import { logAudit } from './audit.js'
@@ -278,7 +279,17 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
       return {
         statusCode: 200,
         headers: jsonHeaders,
-        body: { teams: teamsOut, puzzleVersions: puzzleVersionsOut, settings, activeTeamId, serverTime: now, coordinator },
+        body: {
+          teams: teamsOut,
+          puzzleVersions: puzzleVersionsOut,
+          settings,
+          activeTeamId,
+          serverTime: now,
+          coordinator,
+          ...(coordinator
+            ? { constraintBreachVariants: CB_PRODUCTION_VARIANTS.map(toCoordinatorConstraintVariantView) }
+            : {}),
+        },
       }
     }
 
@@ -486,13 +497,18 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (!team.recoveryCodeUnlocked) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final module is not unlocked yet — enter the correct recovery code first.' } }
         }
-        const variantId = team.constraintBreachVariantId || 'CB-01'
-        const variant = getConstraintVariantById(variantId)
+        if (!team.constraintBreachVariantId) {
+          return { statusCode: 400, headers: jsonHeaders, body: { error: 'No Constraint Breach variant assigned to this team yet.' } }
+        }
+        const variant = getConstraintVariantById(team.constraintBreachVariantId)
         if (!variant) return { statusCode: 404, headers: jsonHeaders, body: { error: 'Assigned variant not found.' } }
         return {
           statusCode: 200,
           headers: jsonHeaders,
-          body: { variant: toParticipantConstraintView(variant, team.constraintBreachHintRevealed === true) },
+          body: {
+            variantId: variant.id,
+            variant: toParticipantConstraintView(variant, team.constraintBreachHintRevealed === true),
+          },
         }
       }
 
@@ -681,6 +697,19 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           if (!valid) return { statusCode: 400, headers: jsonHeaders, body: { error: 'Puzzle assignments must reference a matching saved variant for every slot.' } }
         }
 
+        if (body.constraintBreachVariantId !== undefined) {
+          if (typeof body.constraintBreachVariantId !== 'string') {
+            return { statusCode: 400, headers: jsonHeaders, body: { error: 'Constraint Breach variant must be a valid variant ID.' } }
+          }
+          const assignedVariant = getConstraintVariantById(body.constraintBreachVariantId)
+          if (!assignedVariant) {
+            return { statusCode: 400, headers: jsonHeaders, body: { error: 'Unknown Constraint Breach variant.' } }
+          }
+          // Store only the canonical catalog ID. Participant-facing data is
+          // always resolved from this single server-owned assignment.
+          body.constraintBreachVariantId = assignedVariant.id
+        }
+
         if (body.contactMobile !== undefined) {
           const normalizedMobile = normalizeIndianMobile(body.contactMobile)
           if (!normalizedMobile) {
@@ -722,7 +751,14 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         } else {
           await logAudit(db, 'TEAM_EDITED', { teamId, actor: 'coordinator', now })
           if ('puzzleAssignments' in patch || 'constraintBreachVariantId' in patch) {
-            await logAudit(db, 'PUZZLE_VARIANT_ASSIGNED', { teamId, actor: 'coordinator', now })
+            await logAudit(db, 'PUZZLE_VARIANT_ASSIGNED', {
+              teamId,
+              actor: 'coordinator',
+              now,
+              metadata: patch.constraintBreachVariantId
+                ? { constraintBreachVariantId: result.team.constraintBreachVariantId }
+                : undefined,
+            })
           }
         }
         return { statusCode: 200, headers: jsonHeaders, body: { team: result.team } }

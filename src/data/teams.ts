@@ -51,7 +51,6 @@ export function newTeamDraft(input: NewTeamInput): Omit<Team, 'id' | 'version' |
     puzzleAssignments: input.puzzleAssignments,
     finalCodeTransform: {},
     finalModuleEnabled: false,
-    constraintBreachVariantId: 'CB-01',
     maxTimeSeconds: input.maxTimeSeconds,
     status: 'NOT_STARTED',
     totalPausedMs: 0,

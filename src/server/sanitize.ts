@@ -5,6 +5,7 @@ import type {
   ParticipantPuzzleView,
   ConstraintBreachVariant,
   ParticipantConstraintView,
+  CoordinatorConstraintVariantView,
 } from '../types.js'
 
 // ============================================================================
@@ -90,6 +91,21 @@ export function toParticipantConstraintView(
     difficulty: variant.difficulty,
     fixedAgents: variant.fixedAgents,
     forbiddenCells,
+  }
+}
+
+/** Coordinator-only display data, derived from the canonical server catalog. */
+export function toCoordinatorConstraintVariantView(
+  variant: ConstraintBreachVariant
+): CoordinatorConstraintVariantView {
+  return {
+    id: variant.id,
+    name: variant.name,
+    difficulty: variant.difficulty,
+    fixedAgents: variant.fixedAgents,
+    initialForbiddenCells: variant.initialForbiddenCells,
+    hiddenHintForbiddenCell: variant.hiddenHintForbiddenCell,
+    overrideCode: variant.overrideCode,
   }
 }
 

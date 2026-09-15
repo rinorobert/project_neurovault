@@ -129,6 +129,21 @@ export interface ParticipantConstraintView {
   forbiddenCells: CellCoord[]
 }
 
+/**
+ * Coordinator-safe display view of a server-owned Constraint Breach variant.
+ * This deliberately excludes the solution while retaining the configuration
+ * needed to assign and verify a physical board.
+ */
+export interface CoordinatorConstraintVariantView {
+  id: string
+  name?: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  fixedAgents: Array<{ agentId: number; row: number; col: number }>
+  initialForbiddenCells: CellCoord[]
+  hiddenHintForbiddenCell: CellCoord
+  overrideCode: string
+}
+
 export interface ConstraintBreachSubmission {
   placement: Array<{ agentId: number; row: number; col: number }>
 }

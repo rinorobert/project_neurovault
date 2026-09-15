@@ -123,11 +123,11 @@ export function ConstraintBreachView({
       </div>
 
       {/* 2. RESPONSIVE TWO-COLUMN GRID (Desktop: 7 cols Main / 5 cols Secondary) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full items-start">
+      <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.85fr)]">
         {/* ================================================================= */}
         {/* MAIN AREA (Left 7 Cols)                                           */}
         {/* ================================================================= */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           {/* SYSTEM CONDITIONS / PUZZLE GUIDELINES */}
           <div
             className="rounded-md p-5 flex flex-col gap-3"
@@ -184,27 +184,32 @@ export function ConstraintBreachView({
             </div>
 
             {/* Reference Board Display */}
-            <div className="flex flex-col items-center select-none my-2">
+            <div className="flex w-full flex-col items-center select-none my-2">
               {/* Top Column Labels (A-H) */}
-              <div className="grid grid-cols-8 w-72 sm:w-88 text-center font-mono text-[11px] font-semibold mb-1" style={{ color: 'var(--cyan)' }}>
+              <div className="grid w-full max-w-[34rem] grid-cols-8 text-center font-mono text-[11px] font-semibold mb-1" style={{ color: 'var(--cyan)' }}>
                 {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((col) => (
                   <div key={col}>{col}</div>
                 ))}
               </div>
 
               {/* Grid Rows (Rank 8 down to Rank 1) */}
-              <div className="flex">
+              <div className="flex w-full max-w-[38rem] items-stretch justify-center">
                 {/* Rank Labels Left */}
-                <div className="flex flex-col justify-around pr-2 font-mono text-[11px] font-semibold" style={{ color: 'var(--cyan)' }}>
+                <div className="grid grid-rows-8 self-stretch pr-2 font-mono text-[11px] font-semibold" style={{ color: 'var(--cyan)' }}>
                   {[8, 7, 6, 5, 4, 3, 2, 1].map((rank) => (
-                    <div key={rank} className="h-9 sm:h-11 flex items-center justify-center w-4">{rank}</div>
+                    <div key={rank} className="flex w-4 items-center justify-center">{rank}</div>
                   ))}
                 </div>
 
                 {/* The 8x8 Cells */}
                 <div
-                  className="grid grid-cols-8 border rounded-xs overflow-hidden"
-                  style={{ borderColor: 'var(--line)', width: '22rem', maxWidth: '100%' }}
+                  className="grid grid-cols-8 flex-none overflow-hidden rounded-xs border"
+                  style={{
+                    borderColor: 'var(--line)',
+                    width: 'min(100%, 34rem)',
+                    aspectRatio: '1 / 1',
+                    gridTemplateRows: 'repeat(8, minmax(0, 1fr))',
+                  }}
                 >
                   {[7, 6, 5, 4, 3, 2, 1, 0].map((row) =>
                     [0, 1, 2, 3, 4, 5, 6, 7].map((col) => {
@@ -217,7 +222,7 @@ export function ConstraintBreachView({
                       return (
                         <div
                           key={key}
-                          className="h-9 sm:h-11 flex items-center justify-center font-mono text-[10px] sm:text-xs relative"
+                          className="relative flex min-h-0 min-w-0 items-center justify-center font-mono text-[10px] sm:text-xs"
                           style={{
                             background: isForbidden
                               ? isRevealedHint
@@ -258,15 +263,15 @@ export function ConstraintBreachView({
                 </div>
 
                 {/* Rank Labels Right */}
-                <div className="flex flex-col justify-around pl-2 font-mono text-[11px] font-semibold" style={{ color: 'var(--cyan)' }}>
+                <div className="grid grid-rows-8 self-stretch pl-2 font-mono text-[11px] font-semibold" style={{ color: 'var(--cyan)' }}>
                   {[8, 7, 6, 5, 4, 3, 2, 1].map((rank) => (
-                    <div key={rank} className="h-9 sm:h-11 flex items-center justify-center w-4">{rank}</div>
+                    <div key={rank} className="flex w-4 items-center justify-center">{rank}</div>
                   ))}
                 </div>
               </div>
 
               {/* Bottom Column Labels (A-H) */}
-              <div className="grid grid-cols-8 w-72 sm:w-88 text-center font-mono text-[11px] font-semibold mt-1" style={{ color: 'var(--cyan)' }}>
+              <div className="grid w-full max-w-[34rem] grid-cols-8 text-center font-mono text-[11px] font-semibold mt-1" style={{ color: 'var(--cyan)' }}>
                 {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((col) => (
                   <div key={col}>{col}</div>
                 ))}
@@ -296,7 +301,7 @@ export function ConstraintBreachView({
         {/* ================================================================= */}
         {/* SECONDARY AREA (Right 5 Cols)                                     */}
         {/* ================================================================= */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           {/* FIXED AGENTS */}
           <div
             className="rounded-md p-5 flex flex-col gap-3"

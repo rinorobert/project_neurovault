@@ -7,6 +7,7 @@ import type {
   InitialPuzzleSlotKey,
   HintLevel,
   ParticipantConstraintView,
+  CoordinatorConstraintVariantView,
 } from '../types.js'
 
 // ============================================================================
@@ -29,6 +30,7 @@ export type SyncStatus = 'connecting' | 'ok' | 'error'
 interface StoreState {
   teams: Team[]
   puzzleVersions: PuzzleVersion[]
+  constraintBreachVariants: CoordinatorConstraintVariantView[]
   settings: GameSettings
   activeTeamId: string | null
   coordinator: boolean
@@ -129,6 +131,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoreState>({
     teams: [],
     puzzleVersions: [],
+    constraintBreachVariants: [],
     settings: { defaultMaxTimeSeconds: 25 * 60, registrationOpen: true, publicLeaderboardUnlocked: false },
     activeTeamId: null,
     coordinator: false,
@@ -147,11 +150,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, syncStatus: 'error', lastError: result.body?.error ?? 'Failed to reach server' }))
       return
     }
-    const { teams, puzzleVersions, settings, activeTeamId, coordinator } = result.body
+    const { teams, puzzleVersions, settings, activeTeamId, coordinator, constraintBreachVariants } = result.body
     setState((s) => ({
       ...s,
       teams,
       puzzleVersions,
+      constraintBreachVariants: Array.isArray(constraintBreachVariants) ? constraintBreachVariants : [],
       settings,
       activeTeamId,
       coordinator: Boolean(coordinator),

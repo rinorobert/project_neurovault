@@ -5,41 +5,34 @@ import { computeFinalCode } from '../lib/finalCode.js'
 import { useStore } from '../state/store.js'
 import { areInitialPuzzlesCompleted } from '../engine/gameEngine.js'
 
-const CB_VARIANTS_CONFIG = [
-  {
-    id: 'CB-01',
-    name: 'CB-01 — THE BREACH',
-    fixed: 'Agent 2 → H2, Agent 5 → A5, Agent 6 → G6',
-    forbidden: 'H1, C5, F3 (Hint 1: D1)',
-    overrideCode: '53847162',
-  },
-  {
-    id: 'CB-02',
-    name: 'CB-02 — THE FRACTURE',
-    fixed: 'Agent 2 → B6, Agent 5 → E1, Agent 6 → F4',
-    forbidden: 'H8, C7, G5 (Hint 1: D3)',
-    overrideCode: '36271485',
-  },
-  {
-    id: 'CB-03',
-    name: 'CB-03 — THE COLLAPSE',
-    fixed: 'Agent 2 → B8, Agent 5 → E1, Agent 6 → F7',
-    forbidden: 'D6, C4, A3 (Hint 1: G5)',
-    overrideCode: '48531726',
-  },
-]
+function coordinateLabel(row: number, col: number): string {
+  return `${String.fromCharCode(65 + col)}${row + 1}`
+}
 
 export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzleVersions: PuzzleVersion[] }) {
-  const { setPuzzleVersion, markPuzzleCompleted, updateTeam, changeFinalCodeOverride, assignConstraintVariant, completeConstraintBreachAction } = useStore()
+  const {
+    setPuzzleVersion,
+    markPuzzleCompleted,
+    updateTeam,
+    changeFinalCodeOverride,
+    assignConstraintVariant,
+    completeConstraintBreachAction,
+    constraintBreachVariants,
+  } = useStore()
   const [editingCode, setEditingCode] = useState(false)
   const [codeDraft, setCodeDraft] = useState('')
 
   const expectedCode = computeFinalCode(team, puzzleVersions)
   const initialDone = areInitialPuzzlesCompleted(team)
 
-  const activeCbVariant = CB_VARIANTS_CONFIG.find(
-    (v) => v.id.toUpperCase() === (team.constraintBreachVariantId?.toUpperCase() ?? 'CB-01')
-  ) ?? CB_VARIANTS_CONFIG[0]
+  const assignedCbVariantId = team.constraintBreachVariantId?.trim().toUpperCase()
+  const activeCbVariant = constraintBreachVariants.find((v) => v.id === assignedCbVariantId)
+  const fixedAgentsLabel = activeCbVariant?.fixedAgents
+    .map((agent) => `Agent ${agent.agentId} → ${coordinateLabel(agent.row, agent.col)}`)
+    .join(', ')
+  const forbiddenCellsLabel = activeCbVariant
+    ? `${activeCbVariant.initialForbiddenCells.map((cell) => coordinateLabel(cell.row, cell.col)).join(', ')} (Hint 1: ${coordinateLabel(activeCbVariant.hiddenHintForbiddenCell.row, activeCbVariant.hiddenHintForbiddenCell.col)})`
+    : undefined
 
   return (
     <div className="rounded-md p-5 flex flex-col gap-4" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
@@ -120,12 +113,13 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                     Assigned Variant:
                   </span>
                   <select
-                    value={team.constraintBreachVariantId ?? 'CB-01'}
+                    value={assignedCbVariantId ?? ''}
                     onChange={(e) => assignConstraintVariant(team.id, e.target.value)}
                     className="font-mono text-xs rounded-sm px-2.5 py-1.5 outline-none font-semibold"
                     style={{ background: 'var(--bg-void)', border: '1px solid var(--cyan)', color: 'var(--cyan)' }}
                   >
-                    {CB_VARIANTS_CONFIG.map((v) => (
+                    {!assignedCbVariantId && <option value="" disabled>No variant assigned</option>}
+                    {constraintBreachVariants.map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.name} (Override: {v.overrideCode})
                       </option>
@@ -133,10 +127,10 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                   </select>
 
                   <span className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
-                    Fixed: <strong style={{ color: 'var(--text-hi)' }}>{activeCbVariant.fixed}</strong>
+                    Fixed: <strong style={{ color: 'var(--text-hi)' }}>{fixedAgentsLabel ?? 'No variant assigned'}</strong>
                   </span>
                   <span className="font-mono text-[11px]" style={{ color: 'var(--text-dim)' }}>
-                    Forbidden: <strong style={{ color: 'var(--text-hi)' }}>{activeCbVariant.forbidden}</strong>
+                    Forbidden: <strong style={{ color: 'var(--text-hi)' }}>{forbiddenCellsLabel ?? 'No variant assigned'}</strong>
                   </span>
                 </div>
 
@@ -244,7 +238,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
           ) : (
             <div className="flex items-center gap-3">
               <span className="digit-box text-3xl font-bold tracking-widest" style={{ color: 'var(--cyan)' }}>
-                {team.finalCodeOverride || activeCbVariant.overrideCode || expectedCode}
+                {team.finalCodeOverride || activeCbVariant?.overrideCode || expectedCode}
               </span>
               {team.finalCodeOverride && (
                 <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--amber)' }}>
@@ -253,7 +247,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
               )}
               <button
                 onClick={() => {
-                  setCodeDraft(team.finalCodeOverride || activeCbVariant.overrideCode || expectedCode)
+                  setCodeDraft(team.finalCodeOverride || activeCbVariant?.overrideCode || expectedCode)
                   setEditingCode(true)
                 }}
                 className="font-mono text-[11px] uppercase tracking-wider px-2 py-1 rounded-sm"
