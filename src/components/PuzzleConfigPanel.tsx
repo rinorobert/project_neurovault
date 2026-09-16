@@ -23,6 +23,10 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
   const [codeDraft, setCodeDraft] = useState('')
 
   const expectedCode = computeFinalCode(team, puzzleVersions)
+  // `finalCodeOverride` is the coordinator's optional four-digit Recovery
+  // Code. The Constraint Breach override is deliberately kept separate and
+  // only shown after the coordinator enables the final module.
+  const recoveryCode = team.finalCodeOverride || expectedCode
   const initialDone = areInitialPuzzlesCompleted(team)
 
   const assignedCbVariantId = team.constraintBreachVariantId?.trim().toUpperCase()
@@ -121,7 +125,7 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                     {!assignedCbVariantId && <option value="" disabled>No variant assigned</option>}
                     {constraintBreachVariants.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {v.name} (Override: {v.overrideCode})
+                        {v.name}
                       </option>
                     ))}
                   </select>
@@ -206,13 +210,13 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
       <div className="pt-3 mt-1 border-t flex flex-wrap items-center gap-4" style={{ borderColor: 'var(--line)' }}>
         <div>
           <div className="font-mono text-xs tracking-[0.25em] mb-1" style={{ color: 'var(--text-dim)' }}>
-            EXPECTED FINAL OVERRIDE / RECOVERY CODE (COORDINATOR REFERENCE)
+            RECOVERY CODE
           </div>
           {editingCode ? (
             <div className="flex items-center gap-2">
               <input
                 value={codeDraft}
-                onChange={(e) => setCodeDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+                onChange={(e) => setCodeDraft(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 autoFocus
                 className="digit-box text-2xl font-bold rounded-sm px-2 py-1 w-32 outline-none"
                 style={{ background: 'var(--bg-raised)', border: '1px solid var(--cyan)', color: 'var(--text-hi)' }}
@@ -238,16 +242,16 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
           ) : (
             <div className="flex items-center gap-3">
               <span className="digit-box text-3xl font-bold tracking-widest" style={{ color: 'var(--cyan)' }}>
-                {team.finalCodeOverride || activeCbVariant?.overrideCode || expectedCode}
+                {recoveryCode}
               </span>
               {team.finalCodeOverride && (
                 <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: 'var(--amber)' }}>
-                  manual override
+                  manual recovery code
                 </span>
               )}
               <button
                 onClick={() => {
-                  setCodeDraft(team.finalCodeOverride || activeCbVariant?.overrideCode || expectedCode)
+                  setCodeDraft(recoveryCode)
                   setEditingCode(true)
                 }}
                 className="font-mono text-[11px] uppercase tracking-wider px-2 py-1 rounded-sm"
@@ -261,12 +265,22 @@ export function PuzzleConfigPanel({ team, puzzleVersions }: { team: Team; puzzle
                   className="font-mono text-[11px] uppercase tracking-wider px-2 py-1 rounded-sm"
                   style={{ border: '1px solid var(--line)', color: 'var(--text-dim)' }}
                 >
-                  Revert to Variant
+                  Revert to Calculated Recovery Code
                 </button>
               )}
             </div>
           )}
         </div>
+        {team.finalModuleEnabled && activeCbVariant && (
+          <div>
+            <div className="font-mono text-xs tracking-[0.25em] mb-1" style={{ color: 'var(--cyan)' }}>
+              CONSTRAINT BREACH OVERRIDE
+            </div>
+            <span className="digit-box text-3xl font-bold tracking-widest" style={{ color: 'var(--cyan)' }}>
+              {activeCbVariant.overrideCode}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

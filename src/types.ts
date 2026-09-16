@@ -203,7 +203,7 @@ export interface Team {
 
   puzzleAssignments: TeamPuzzleAssignment[]
   finalCodeTransform: FinalCodeTransform
-  /** Manual coordinator override for the final code. Takes precedence if set. Server-only, never sent to participants. */
+  /** Coordinator-configured four-digit Recovery Code. Server-only, never sent to participants. */
   finalCodeOverride?: string
   /** Assigned Constraint Breach variant id for the final module (server-only reference). */
   constraintBreachVariantId?: string

@@ -1066,6 +1066,11 @@ async function run() {
       body: { finalCodeOverride: '0000' },
     })
     check('Coordinator can retain a legacy recovery-code override without changing the assigned Puzzle 5 variant', legacyOverride.statusCode === 200)
+    const invalidRecoveryOverride = await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { finalCodeOverride: '36271485' },
+    })
+    check('Coordinator Recovery Code remains exactly four digits', invalidRecoveryOverride.statusCode === 400)
 
     const beforePhysicalConfirmation = await call('POST', `/api/teams/${tId}/final-code/verify`, {
       body: { code: '36271485' },
@@ -1101,6 +1106,11 @@ async function run() {
     const completeRes = await call('POST', `/api/teams/${tId}/constraint-breach/complete`, { cookie: coordinatorCookie })
     check('Confirming physical grid restoration sets finalPuzzleCompleted', completeRes.body.team.finalPuzzleCompleted === true)
     check('Constraint Breach completion does NOT escape the team', completeRes.body.team.status === 'RUNNING')
+    const recoveryCodeAfterCompletion = await getDatabase().getTeamById(tId)
+    check(
+      'Confirming Constraint Breach preserves the coordinator\'s four-digit Recovery Code',
+      recoveryCodeAfterCompletion?.finalCodeOverride === '0000'
+    )
 
     // Final override validation: wrong 8-digit code
     const wrongOverride = await call('POST', `/api/teams/${tId}/final-code/verify`, {

@@ -11,7 +11,7 @@ import {
 } from './security.js'
 import * as engine from '../engine/gameEngine.js'
 import { buildLeaderboard } from '../lib/leaderboard.js'
-import { solveConstraintBreach, validateConstraintBreachSubmission, deriveOverrideCodeFromPlacement } from '../lib/constraintBreachSolver.js'
+import { solveConstraintBreach, validateConstraintBreachSubmission } from '../lib/constraintBreachSolver.js'
 import { CB_PRODUCTION_VARIANTS, getConstraintVariantById } from './puzzleData/constraintVariants.js'
 import { newTeamDraft, defaultPuzzleAssignments } from '../data/teams.js'
 import { normalizeIndianMobile } from './validation.js'
@@ -604,7 +604,6 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           return { statusCode: 200, headers: jsonHeaders, body: { correct: false } }
         }
 
-        const overrideCode = variant.overrideCode ?? deriveOverrideCodeFromPlacement(variant.solution)
         const outcome = await withTeamMutation(
           db, teamId, now,
           (t) => engine.markFinalPuzzleCompleted(t, true, 'FINAL_STABILIZED'),
@@ -613,12 +612,10 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (outcome.statusCode !== 200 || !outcome.team) {
           return { statusCode: outcome.statusCode, headers: jsonHeaders, body: outcome.body }
         }
-        // Store the server-derived override code so final-code/verify can
-        // check it — this is NEVER echoed back to the client.
-        const withCode = await db.updateTeam(teamId, { finalCodeOverride: overrideCode }, outcome.team.version)
-        const finalTeam = withCode.ok ? withCode.team : outcome.team
-
-        return { statusCode: 200, headers: jsonHeaders, body: { correct: true, team: toParticipantTeamView(finalTeam) } }
+        // Final-code verification resolves the assigned server-side variant
+        // directly. Do not overwrite the coordinator's separate four-digit
+        // Recovery Code with this variant's eight-digit answer.
+        return { statusCode: 200, headers: jsonHeaders, body: { correct: true, team: toParticipantTeamView(outcome.team) } }
       }
 
       if (subpath === 'final-code/verify' && method === 'POST') {
@@ -715,6 +712,15 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           // Store only the canonical catalog ID. Participant-facing data is
           // always resolved from this single server-owned assignment.
           body.constraintBreachVariantId = assignedVariant.id
+        }
+
+        // This legacy-named field is the coordinator-configured Recovery
+        // Code. The Constraint Breach override comes only from the assigned
+        // server-side variant and is never persisted into this field.
+        if (body.finalCodeOverride !== undefined && body.finalCodeOverride !== null) {
+          if (typeof body.finalCodeOverride !== 'string' || !/^\d{4}$/.test(body.finalCodeOverride)) {
+            return { statusCode: 400, headers: jsonHeaders, body: { error: 'Recovery code must contain exactly 4 digits.' } }
+          }
         }
 
         if (body.contactMobile !== undefined) {
