@@ -261,9 +261,7 @@ export function ConstraintBreachView({
                                 color: 'var(--bg-void)',
                                 boxShadow: '0 0 10px rgba(0,240,255,0.6)',
                               }}
-                            >
-                              {agentId}
-                            </span>
+                            />
                           ) : isForbidden ? (
                             <span
                               className="font-bold text-base leading-none"
