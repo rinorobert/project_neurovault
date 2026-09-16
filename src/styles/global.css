@@ -14,8 +14,8 @@
      --red         #FF3B4E   critical / denied / expired
      --green       #35E28C   success / escaped
      --text-hi     #E9F4F4   primary text
-     --text-mid    #93A7B4   secondary text
-     --text-dim    #4C606E   tertiary / disabled text
+     --text-mid    #CEDDE2   secondary text
+     --text-dim    #A9C0C9   tertiary / disabled text
 
    Type:
      Display  — condensed uppercase, wide tracking, system stack (no external font dependency)
@@ -33,8 +33,8 @@
   --red: #ff3b4e;
   --green: #35e28c;
   --text-hi: #e9f4f4;
-  --text-mid: #93a7b4;
-  --text-dim: #4c606e;
+  --text-mid: #cedde2;
+  --text-dim: #a9c0c9;
 
   --font-display: "Chakra Petch", "Segoe UI Semibold", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
@@ -202,6 +202,40 @@ body {
 }
 .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Projector readability: the interface deliberately uses compact terminal
+   typography, so raise its shared small-text scale by one controlled step.
+   Keeping these overrides global preserves every page's existing layout,
+   hierarchy, and semantic accent colors without touching application logic. */
+.text-xs {
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+.text-sm {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.text-base {
+  font-size: 1.125rem;
+  line-height: 1.45;
+}
+
+/* The compact readouts below are used for metadata, status labels, grid
+   coordinates, and control text. They remain compact, but are now legible
+   at projector distance. */
+.text-\[9px\] {
+  font-size: 0.75rem;
+}
+
+.text-\[10px\] {
+  font-size: 0.8125rem;
+}
+
+.text-\[11px\] {
+  font-size: 0.875rem;
 }
 
 /* Segmented digit box, used for the final code entry / readouts */
