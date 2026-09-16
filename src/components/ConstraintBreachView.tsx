@@ -39,7 +39,7 @@ export function ConstraintBreachView({
   }, [team.id, team.constraintBreachHintRevealed, fetchConstraintBreach])
 
   async function handleHint() {
-    if (hinting || disabled || team.constraintBreachHintRevealed || team.hintsUsed >= 1) return
+    if (hinting || disabled || team.constraintBreachHintRevealed) return
     setHinting(true)
     try {
       await requestConstraintBreachHint(team.id)
@@ -91,8 +91,24 @@ export function ConstraintBreachView({
     }
   }
 
-  const isHintUsed = team.constraintBreachHintRevealed === true || team.hintsUsed >= 1
+  // Constraint Breach's single participant-requested hint is separate from
+  // the coordinator's general module hints. Only its server-owned reveal
+  // flag may expose the hidden forbidden cell.
+  const isHintUsed = team.constraintBreachHintRevealed === true
   const physicalBoardConfirmed = team.finalPuzzleCompleted === true
+
+  if (!loading && !variantView) {
+    return (
+      <div className="w-full rounded-md p-6 text-center" style={{ background: 'var(--bg-panel)', border: '1px solid var(--line)' }}>
+        <div className="font-display text-lg font-bold tracking-[0.2em]" style={{ color: 'var(--red)' }}>
+          CONSTRAINT BREACH
+        </div>
+        <div className="font-mono text-xs tracking-[0.2em] mt-3" style={{ color: 'var(--text-mid)' }}>
+          AWAITING COORDINATOR ASSIGNMENT
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full flex flex-col gap-6">

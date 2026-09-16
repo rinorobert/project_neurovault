@@ -823,6 +823,19 @@ async function run() {
     check('CB-02 override code is 36271485', CB_02.overrideCode === '36271485')
     check('CB-03 override code is 48531726', CB_03.overrideCode === '48531726')
 
+    const coordinatorState = await call('GET', '/api/state', { cookie: coordinatorCookie })
+    check(
+      'Coordinator state exposes the complete canonical Constraint Breach catalog only to the coordinator',
+      coordinatorState.statusCode === 200 &&
+        Array.isArray(coordinatorState.body.constraintBreachVariants) &&
+        coordinatorState.body.constraintBreachVariants.length === 3
+    )
+    const participantState = await call('GET', '/api/state')
+    check(
+      'Participant state cannot select or read the coordinator variant catalog',
+      participantState.statusCode === 200 && participantState.body.constraintBreachVariants === undefined
+    )
+
     // Create a new team via coordinator
     const regRes = await call('POST', '/api/teams', {
       cookie: coordinatorCookie,
@@ -844,14 +857,7 @@ async function run() {
     })
     check('Participant cannot change Puzzle 5 variant without coordinator auth (401)', badPatch.statusCode === 401)
 
-    // Coordinator assigns CB-02
-    const goodPatch = await call('PATCH', `/api/teams/${tId}`, {
-      cookie: coordinatorCookie,
-      body: { constraintBreachVariantId: 'CB-02' },
-    })
-    check('Coordinator can assign CB-02 variant to team', goodPatch.statusCode === 200 && goodPatch.body.team.constraintBreachVariantId === 'CB-02')
-
-    // Start team and unlock initial stations
+    // Start team and unlock initial stations without assigning a variant.
     await call('POST', `/api/teams/${tId}/game/start`, { cookie: coordinatorCookie })
     for (const slot of ['SLOT_1', 'SLOT_2', 'SLOT_3', 'SLOT_4']) {
       await call('POST', `/api/teams/${tId}/puzzles/${slot}/complete`, {
@@ -882,6 +888,177 @@ async function run() {
     })
     check('Coordinator enables final module for team', enableRes.body.team.finalModuleEnabled === true)
 
+    const unassignedView = await call('GET', `/api/teams/${tId}/constraint-breach`)
+    const unassignedHint = await call('POST', `/api/teams/${tId}/constraint-breach/hint`)
+    const unassignedAfterHint = await getDatabase().getTeamById(tId)
+    check(
+      'Participant cannot load Constraint Breach before coordinator assignment',
+      unassignedView.statusCode === 400 && String(unassignedView.body.error).toLowerCase().includes('variant assigned') && !('variant' in unassignedView.body)
+    )
+    check(
+      'An unassigned team cannot consume Constraint Breach Hint 1',
+      unassignedHint.statusCode === 400 &&
+        unassignedAfterHint?.constraintBreachHintRevealed === false &&
+        unassignedAfterHint?.hintsUsed === 0
+    )
+
+    // Coordinator assigns CB-02 only after the team is otherwise ready.
+    const goodPatch = await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { constraintBreachVariantId: 'CB-02' },
+    })
+    check('Coordinator can assign CB-02 variant to team', goodPatch.statusCode === 200 && goodPatch.body.team.constraintBreachVariantId === 'CB-02')
+
+    const initialConstraintView = await call('GET', `/api/teams/${tId}/constraint-breach`)
+    const initialConstraintRefresh = await call('GET', `/api/teams/${tId}/constraint-breach`)
+    const beforeHintTeam = await getDatabase().getTeamById(tId)
+    check(
+      'Opening or refreshing Constraint Breach does not consume Hint 1',
+      initialConstraintView.body.variant.forbiddenCells.length === 3 &&
+        initialConstraintRefresh.body.variant.forbiddenCells.length === 3 &&
+        beforeHintTeam?.constraintBreachHintRevealed === false &&
+        beforeHintTeam?.hintsUsed === 0
+    )
+
+    for (const expectedVariant of [CB_01, CB_02, CB_03]) {
+      const assignment = await call('PATCH', `/api/teams/${tId}`, {
+        cookie: coordinatorCookie,
+        body: { constraintBreachVariantId: expectedVariant.id },
+      })
+      const coordinatorRefresh = await call('GET', `/api/teams/${tId}`, { cookie: coordinatorCookie })
+      const coordinatorCatalogRefresh = await call('GET', '/api/state', { cookie: coordinatorCookie })
+      const participantOpen = await call('GET', `/api/teams/${tId}/constraint-breach`)
+      const participantRefresh = await call('GET', `/api/teams/${tId}/constraint-breach`)
+      const coordinatorVariant = coordinatorCatalogRefresh.body.constraintBreachVariants.find(
+        (variant: any) => variant.id === expectedVariant.id
+      )
+
+      check(
+        `${expectedVariant.id}: coordinator assignment persists as the canonical ID`,
+        assignment.statusCode === 200 && coordinatorRefresh.body.team.constraintBreachVariantId === expectedVariant.id
+      )
+      check(
+        `${expectedVariant.id}: coordinator details are derived from the canonical variant catalog`,
+        JSON.stringify(coordinatorVariant) ===
+          JSON.stringify({
+            id: expectedVariant.id,
+            name: expectedVariant.name,
+            difficulty: expectedVariant.difficulty,
+            fixedAgents: expectedVariant.fixedAgents,
+            initialForbiddenCells: expectedVariant.initialForbiddenCells,
+            hiddenHintForbiddenCell: expectedVariant.hiddenHintForbiddenCell,
+            overrideCode: expectedVariant.overrideCode,
+          })
+      )
+      check(
+        `${expectedVariant.id}: participant open and refresh retain the coordinator-assigned variant`,
+        participantOpen.body.variantId === expectedVariant.id &&
+          participantOpen.body.variant.id === expectedVariant.id &&
+          participantRefresh.body.variantId === expectedVariant.id &&
+          participantRefresh.body.variant.id === expectedVariant.id
+      )
+      check(
+        `${expectedVariant.id}: participant fixed agents and visible forbidden cells match the canonical definition`,
+        JSON.stringify(participantOpen.body.variant.fixedAgents) === JSON.stringify(expectedVariant.fixedAgents) &&
+          JSON.stringify(participantOpen.body.variant.forbiddenCells) === JSON.stringify(expectedVariant.initialForbiddenCells)
+      )
+      check(
+        `${expectedVariant.id}: participant response does not expose the hidden hint cell or final override`,
+        participantOpen.body.variant.hiddenHintForbiddenCell === undefined &&
+          participantOpen.body.variant.overrideCode === undefined
+      )
+    }
+
+    // A coordinator's ordinary module hint must not be mistaken for the
+    // participant's explicit Constraint Breach Hint 1 request.
+    const genericHintTeam = await getDatabase().createTeam({
+      name: 'Generic Hint Isolation',
+      members: ['Lead', 'M2', 'M3', 'M4'],
+      captain: 'Lead',
+      contactEmail: 'generic-hint@neurovault.test',
+      contactMobile: '+919999900009',
+      registrationStatus: 'ACTIVE',
+      registeredAt: Date.now(),
+      registrationSource: 'COORDINATOR_MANUAL',
+      puzzleAssignments: [],
+      finalCodeTransform: {},
+      constraintBreachVariantId: 'CB-01',
+      finalModuleEnabled: true,
+      constraintBreachHintRevealed: false,
+      maxTimeSeconds: 1500,
+      status: 'RUNNING',
+      startedAt: Date.now(),
+      totalPausedMs: 0,
+      puzzleCompleted: { SLOT_1: true, SLOT_2: true, SLOT_3: true, SLOT_4: true },
+      finalPuzzleCompleted: false,
+      puzzleOutputs: {},
+      hintsUsed: 0,
+      hintLevelLog: [],
+      attempts: 0,
+      attemptLog: [],
+      recoveryCodeUnlocked: true,
+    } as any)
+    const genericHint = await call('POST', `/api/teams/${genericHintTeam.id}/hints/use`, {
+      cookie: coordinatorCookie,
+      body: { level: 1 },
+    })
+    const genericHintConstraintView = await call('GET', `/api/teams/${genericHintTeam.id}/constraint-breach`)
+    check(
+      'A general coordinator Hint 1 never auto-reveals the Constraint Breach hidden cell',
+      genericHint.statusCode === 200 &&
+        genericHint.body.team.constraintBreachHintRevealed === false &&
+        genericHintConstraintView.body.variant.forbiddenCells.length === 3
+    )
+
+    const isolationViews = []
+    for (const [index, expectedVariant] of [CB_01, CB_02, CB_03].entries()) {
+      const registration = await call('POST', '/api/teams', {
+        cookie: coordinatorCookie,
+        body: {
+          name: `Variant Isolation ${expectedVariant.id}`,
+          captain: 'Lead',
+          members: ['Lead', 'M2', 'M3', 'M4'],
+          contactEmail: `isolation-${index}@neurovault.test`,
+          contactMobile: `+91999990000${index + 2}`,
+        },
+      })
+      const created = registration.body.team
+      const updated = await getDatabase().updateTeam(
+        created.id,
+        {
+          constraintBreachVariantId: expectedVariant.id,
+          finalModuleEnabled: true,
+          recoveryCodeUnlocked: true,
+          status: 'RUNNING',
+          startedAt: Date.now(),
+        },
+        created.version
+      )
+      const view = await call('GET', `/api/teams/${created.id}/constraint-breach`)
+      const hint = await call('POST', `/api/teams/${created.id}/constraint-breach/hint`)
+      const viewAfterHint = await call('GET', `/api/teams/${created.id}/constraint-breach`)
+      isolationViews.push({ updated, view, hint, viewAfterHint, expectedVariant })
+    }
+    check(
+      'Different teams retain isolated assigned variants simultaneously',
+      isolationViews.every(({ updated, view, hint, viewAfterHint, expectedVariant }) =>
+        updated.ok &&
+        view.statusCode === 200 &&
+        view.body.variantId === expectedVariant.id &&
+        JSON.stringify(view.body.variant.fixedAgents) === JSON.stringify(expectedVariant.fixedAgents) &&
+        JSON.stringify(view.body.variant.forbiddenCells) === JSON.stringify(expectedVariant.initialForbiddenCells) &&
+        hint.statusCode === 200 &&
+        JSON.stringify(viewAfterHint.body.variant.forbiddenCells) ===
+          JSON.stringify([...expectedVariant.initialForbiddenCells, expectedVariant.hiddenHintForbiddenCell])
+      )
+    )
+
+    // Keep the remaining final-stage checks on the established CB-02 board.
+    await call('PATCH', `/api/teams/${tId}`, {
+      cookie: coordinatorCookie,
+      body: { constraintBreachVariantId: 'CB-02' },
+    })
+
     // Regression guard: a legacy four-digit recovery-code override must never
     // shadow the assigned Constraint Breach variant's eight-digit override.
     const legacyOverride = await call('PATCH', `/api/teams/${tId}`, {
@@ -898,11 +1075,24 @@ async function run() {
 
     // Participant requests Hint 1 for Constraint Breach
     const hintRes = await call('POST', `/api/teams/${tId}/constraint-breach/hint`)
-    check('Participant can request Constraint Breach Hint 1 (+30s penalty)', hintRes.statusCode === 200 && hintRes.body.success === true)
+    check(
+      'Participant can request Constraint Breach Hint 1 (+30s penalty)',
+      hintRes.statusCode === 200 && hintRes.body.success === true && hintRes.body.team.constraintBreachHintRevealed === true && hintRes.body.team.hintsUsed === 1
+    )
 
-    // Participant view shows 4 forbidden cells after Hint 1
+    // Participant view shows the one server-authorized fourth cell after Hint 1,
+    // and refreshes never consume another hint or penalty.
     const viewAfterHint = await call('GET', `/api/teams/${tId}/constraint-breach`)
-    check('Constraint Breach view after Hint 1 includes 4 forbidden cells', viewAfterHint.body.variant.forbiddenCells.length === 4)
+    const viewAfterHintRefresh = await call('GET', `/api/teams/${tId}/constraint-breach`)
+    const secondHint = await call('POST', `/api/teams/${tId}/constraint-breach/hint`)
+    const afterHintTeam = await getDatabase().getTeamById(tId)
+    check(
+      'Constraint Breach view after Hint 1 includes exactly the correct fourth cell and persists through refresh',
+      JSON.stringify(viewAfterHint.body.variant.forbiddenCells) === JSON.stringify([...CB_02.initialForbiddenCells, CB_02.hiddenHintForbiddenCell]) &&
+        JSON.stringify(viewAfterHintRefresh.body.variant.forbiddenCells) === JSON.stringify(viewAfterHint.body.variant.forbiddenCells) &&
+        afterHintTeam?.hintsUsed === 1
+    )
+    check('A second Constraint Breach Hint 1 request is rejected', secondHint.statusCode === 400)
 
     // Physical puzzle solved confirmation
     const noAuthPhysicalConfirm = await call('POST', `/api/teams/${tId}/constraint-breach/complete`)

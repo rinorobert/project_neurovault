@@ -291,6 +291,7 @@ const CLEAN_SLATE = {
   puzzleOutputs: {},
   hintsUsed: 0,
   hintLevelLog: [],
+  constraintBreachHintRevealed: false,
   attempts: 0,
   attemptLog: [],
   recoveryCodeUnlocked: false,

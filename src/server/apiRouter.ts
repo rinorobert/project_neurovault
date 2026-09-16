@@ -518,7 +518,14 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         if (!team.finalModuleEnabled || !team.recoveryCodeUnlocked) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Final module is not accessible yet.' } }
         }
-        if (team.constraintBreachHintRevealed || team.hintsUsed >= 1) {
+        // A participant may only consume this hint for a board that the
+        // coordinator has explicitly assigned. This also prevents an API
+        // request made while awaiting assignment from pre-revealing a future
+        // variant's hidden cell.
+        if (!team.constraintBreachVariantId || !getConstraintVariantById(team.constraintBreachVariantId)) {
+          return { statusCode: 400, headers: jsonHeaders, body: { error: 'No Constraint Breach variant assigned to this team yet.' } }
+        }
+        if (team.constraintBreachHintRevealed) {
           return { statusCode: 400, headers: jsonHeaders, body: { error: 'Constraint Breach hint has already been used.' } }
         }
         const outcome = await withTeamMutation(
@@ -526,7 +533,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           teamId,
           now,
           (t) => {
-            if (t.constraintBreachHintRevealed || t.hintsUsed >= 1) return null
+            if (t.constraintBreachHintRevealed) return null
             return engine.giveHint(t, now, 1 as HintLevel)
           },
           'Hint cannot be used in current state'
@@ -830,8 +837,6 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         const outcome = await withTeamMutation(db, teamId, now, (t) => engine.giveHint(t, now, level), 'Hint cannot be used in current state or sequence')
         if (outcome.statusCode === 200) {
           await logAudit(db, 'HINT_USED', { teamId, actor: 'coordinator', now, metadata: { level } })
-          // Reveal the 4th forbidden cell only once Hint 1 has legitimately fired.
-          if (level === 1) await db.updateTeam(teamId, { constraintBreachHintRevealed: true }, outcome.team!.version)
         }
         return { statusCode: outcome.statusCode, headers: jsonHeaders, body: outcome.team ? { team: outcome.team } : outcome.body }
       }

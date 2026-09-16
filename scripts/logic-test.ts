@@ -173,9 +173,30 @@ section('4. Gated Final Code Submission (Escape)')
   check('Final code is rejected if Constraint Breach is complete but Recovery Code was never unlocked', !bypassRecoveryCorrect)
   check('Rejected pre-gate final code does not create an attempt', bypassRecoveryPatch.attempts === undefined)
 
-  // Once final puzzle is complete, code submission succeeds
-  const unlockedTeam: Team = { ...incompleteTeam, finalPuzzleCompleted: true }
-  const { patch: subPatch, correct: subCorrect } = engine.submitCode(unlockedTeam, correctCode, DEV_FIXTURE_PUZZLE_VERSIONS, now)
+  // Mirror the production final-stage flow: the coordinator opens the final
+  // module, the assigned CB-02 board has a valid unique solution, the board
+  // is confirmed complete, then its eight-digit override is entered.
+  const cb02 = CB_DEV_FIXTURE_VARIANTS.find((variant) => variant.id === 'CB-02')!
+  const cb02Board = solveConstraintBreach(
+    cb02.fixedAgents.map(({ row, col }) => ({ row, col })),
+    [...cb02.initialForbiddenCells, cb02.hiddenHintForbiddenCell]
+  )
+  check('CB-02 board is valid before final-code submission', cb02Board.isValidUniqueVariant)
+  const unlockedTeam: Team = {
+    ...incompleteTeam,
+    constraintBreachVariantId: cb02.id,
+    finalModuleEnabled: true,
+    finalPuzzleCompleted: true,
+    // The API supplies this server-owned value while evaluating the final
+    // override; inject the same effective value for this pure engine test.
+    finalCodeOverride: cb02.overrideCode,
+  }
+  const { patch: subPatch, correct: subCorrect } = engine.submitCode(
+    unlockedTeam,
+    cb02.overrideCode,
+    DEV_FIXTURE_PUZZLE_VERSIONS,
+    now
+  )
   check('Code submission accepted once final puzzle is complete', subCorrect)
   check('Status transitions to ESCAPED on correct code', subPatch.status === 'ESCAPED')
 }
@@ -292,10 +313,21 @@ section('10. Team State Isolation & Switching')
 section('11. Reset Active Run vs Clear Completed Result')
 // ============================================================================
 {
-  const runningTeam: Team = { ...freshTeam(), status: 'RUNNING', startedAt: now - 5000 }
+  const runningTeam: Team = {
+    ...freshTeam(),
+    status: 'RUNNING',
+    startedAt: now - 5000,
+    hintsUsed: 1,
+    hintLevelLog: [{ level: 1, timestamp: now - 1000 }],
+    constraintBreachHintRevealed: true,
+  }
   const completedTeam: Team = { ...freshTeam(), status: 'ESCAPED', finishedAt: now, completionSeconds: 10 }
 
-  check('resetActiveRun clears running team', engine.resetActiveRun(runningTeam) !== null)
+  const resetRunningTeam = engine.resetActiveRun(runningTeam)
+  check(
+    'resetActiveRun clears running team and restores the unused Constraint Breach hint',
+    resetRunningTeam?.hintsUsed === 0 && resetRunningTeam.constraintBreachHintRevealed === false
+  )
   check('resetActiveRun refuses completed team (safety guard)', engine.resetActiveRun(completedTeam) === null)
 
   check('clearCompletedResult works on completed team', engine.clearCompletedResult(completedTeam) !== null)

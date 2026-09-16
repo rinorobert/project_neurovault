@@ -15,6 +15,12 @@ function check(label: string, cond: boolean) {
   if (!cond) failures++
 }
 
+const EXPECTED_ROWS_BY_VARIANT: Record<string, number[]> = {
+  'CB-01': [5, 3, 8, 4, 7, 1, 6, 2],
+  'CB-02': [3, 6, 2, 7, 1, 4, 8, 5],
+  'CB-03': [4, 8, 5, 3, 1, 7, 2, 6],
+}
+
 // 1. Test standard unconstrained 8-queens
 const unconstrained = solveConstraintBreach([])
 check('Standard 8x8 unconstrained board has 92 solutions', unconstrained.solutionCount === 92)
@@ -45,6 +51,15 @@ for (const variant of CB_DEV_FIXTURE_VARIANTS) {
     [...variant.initialForbiddenCells, variant.hiddenHintForbiddenCell]
   )
   check(`${variant.id}: solution becomes strictly unique (= 1) after Hint 1 reveals 4th cell`, resWithHint.solutionCount === 1)
+
+  const solvedRowsAtoH = [...(resWithHint.solutions[0] ?? [])]
+    .sort((a, b) => a.col - b.col)
+    .map((cell) => cell.row + 1)
+  const expectedRowsAtoH = EXPECTED_ROWS_BY_VARIANT[variant.id]
+  check(
+    `${variant.id}: solver produces the required A→H row sequence`,
+    JSON.stringify(solvedRowsAtoH) === JSON.stringify(expectedRowsAtoH)
+  )
 
   // Check that the verified unique solution matches expected coordinates
   const found = resWithHint.solutions[0]
@@ -99,7 +114,7 @@ for (const variant of CB_DEV_FIXTURE_VARIANTS) {
   for (const s of variant.solution) byCol[s.col] = s.row + 1
   check(
     `${variant.id}: derived override code matches expected override code`,
-    code === variant.overrideCode && code === byCol.join('')
+    code === variant.overrideCode && code === byCol.join('') && code === expectedRowsAtoH.join('')
   )
 }
 
